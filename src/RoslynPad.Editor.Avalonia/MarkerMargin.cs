@@ -23,9 +23,13 @@ namespace RoslynPad.Editor
 
         private Control CreateMarker()
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             var marker = new DrawingPresenter();
+#pragma warning restore CS0618 // Type or member is obsolete
             marker.PointerPressed += (o, e) => { e.Handled = true; MarkerPointerDown?.Invoke(o, e); };
+#pragma warning disable CS0618 // Type or member is obsolete
             marker[~DrawingPresenter.DrawingProperty] = this[~MarkerImageProperty];
+#pragma warning restore CS0618 // Type or member is obsolete
             marker[~ToolTip.TipProperty] = this[~MessageProperty];
             VisualChildren.Add(marker);
             LogicalChildren.Add(marker);
@@ -76,7 +80,7 @@ namespace RoslynPad.Editor
             InvalidateArrange();
         }
 
-        private void TextViewVisualLinesChanged(object sender, EventArgs e)
+        private void TextViewVisualLinesChanged(object? sender, EventArgs e)
         {
             InvalidateArrange();
         }

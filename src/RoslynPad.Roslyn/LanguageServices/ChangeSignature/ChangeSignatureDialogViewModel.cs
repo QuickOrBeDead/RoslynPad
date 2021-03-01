@@ -387,11 +387,11 @@ namespace RoslynPad.Roslyn.LanguageServices.ChangeSignature
                         return string.Empty;
                     }
 
-                    return ParameterSymbol.ExplicitDefaultValue == null
-                        ? "null"
-                        : ParameterSymbol.ExplicitDefaultValue is string
-                            ? "\"" + ParameterSymbol.ExplicitDefaultValue + "\""
-                            : ParameterSymbol.ExplicitDefaultValue.ToString();
+                    return (ParameterSymbol.ExplicitDefaultValue == null
+                                ? "null"
+                                : ParameterSymbol.ExplicitDefaultValue is string
+                                    ? "\"" + ParameterSymbol.ExplicitDefaultValue + "\""
+                                    : ParameterSymbol.ExplicitDefaultValue.ToString())!;
                 }
             }
 

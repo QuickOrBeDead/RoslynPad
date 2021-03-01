@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -18,7 +17,6 @@ namespace RoslynPad.UI
     public class MainViewModelBase : NotificationObject
     {
         private readonly IServiceProvider _serviceProvider;
-        private readonly ITelemetryProvider _telemetryProvider;
         private readonly ICommandProvider _commands;
         private readonly DocumentFileWatcher _documentFileWatcher;
         private static readonly Version _currentVersion = new Version(16, 0);
@@ -27,7 +25,6 @@ namespace RoslynPad.UI
         public const string NuGetPathVariableName = "$NuGet";
 
         private OpenDocumentViewModel? _currentOpenDocument;
-        private bool _hasUpdate;
         private double _editorFontSize;
         private string? _searchText;
         private bool _isWithinSearchResults;
@@ -56,23 +53,16 @@ namespace RoslynPad.UI
         }
 
 #pragma warning disable CS8618 // Non-nullable field is uninitialized.
-        public MainViewModelBase(IServiceProvider serviceProvider, ITelemetryProvider telemetryProvider, ICommandProvider commands, IApplicationSettings settings, NuGetViewModel nugetViewModel, DocumentFileWatcher documentFileWatcher)
+        public MainViewModelBase(IServiceProvider serviceProvider, ICommandProvider commands, IApplicationSettings settings, NuGetViewModel nugetViewModel, DocumentFileWatcher documentFileWatcher)
 #pragma warning restore CS8618 // Non-nullable field is uninitialized.
         {
             _serviceProvider = serviceProvider;
-            _telemetryProvider = telemetryProvider;
             _commands = commands;
             _documentFileWatcher = documentFileWatcher;
 
             settings.LoadDefault();
             Settings = settings;
 
-            _telemetryProvider.Initialize(_currentVersion.ToString(), settings);
-            _telemetryProvider.LastErrorChanged += () =>
-            {
-                OnPropertyChanged(nameof(LastError));
-                OnPropertyChanged(nameof(HasError));
-            };
 
             NuGet = nugetViewModel;
 
@@ -80,8 +70,7 @@ namespace RoslynPad.UI
             OpenFileCommand = commands.CreateAsync(OpenFile);
             CloseCurrentDocumentCommand = commands.CreateAsync(CloseCurrentDocument);
             CloseDocumentCommand = commands.CreateAsync<OpenDocumentViewModel>(CloseDocument);
-            ClearErrorCommand = commands.Create(() => _telemetryProvider.ClearLastError());
-            ReportProblemCommand = commands.Create(ReportProblem);
+            ClearErrorCommand = commands.Create(() => {});
             EditUserDocumentPathCommand = commands.Create(EditUserDocumentPath);
             ToggleOptimizationCommand = commands.Create(() => settings.OptimizeCompilation = !settings.OptimizeCompilation);
 
@@ -103,9 +92,9 @@ namespace RoslynPad.UI
 
                 IsInitialized = true;
             }
-            catch (Exception e)
+            catch
             {
-                _telemetryProvider.ReportError(e);
+                // Empty
             }
         }
 
@@ -126,16 +115,6 @@ namespace RoslynPad.UI
 
             OpenDocumentFromCommandLine();
             await OpenAutoSavedDocuments().ConfigureAwait(true);
-
-            if (HasCachedUpdate())
-            {
-                HasUpdate = true;
-            }
-            else
-            {
-                // ReSharper disable once UnusedVariable
-                var task = Task.Run(CheckForUpdates);
-            }
         }
 
         private void OpenDocumentFromCommandLine()
@@ -196,52 +175,6 @@ namespace RoslynPad.UI
                     title += "-" + _currentVersionVariant;
                 }
                 return title;
-            }
-        }
-
-        private static void ReportProblem()
-        {
-            Task.Run(() => Process.Start(
-                new ProcessStartInfo
-                {
-                    FileName = "https://github.com/aelij/RoslynPad/issues",
-                    UseShellExecute = true,
-                }));
-        }
-
-        public bool HasUpdate
-        {
-            get => _hasUpdate; private set => SetProperty(ref _hasUpdate, value);
-        }
-
-        private bool HasCachedUpdate()
-        {
-            return Version.TryParse(Settings.LatestVersion, out var latestVersion) &&
-                   latestVersion > _currentVersion;
-        }
-
-        private async Task CheckForUpdates()
-        {
-            string latestVersionString;
-            using (var client = new System.Net.Http.HttpClient())
-            {
-                try
-                {
-                    latestVersionString = await client.GetStringAsync("https://roslynpad.net/latest").ConfigureAwait(false);
-                }
-                catch
-                {
-                    return;
-                }
-            }
-
-            if (Version.TryParse(latestVersionString, out var latestVersion))
-            {
-                if (latestVersion > _currentVersion)
-                {
-                    HasUpdate = true;
-                }
-                Settings.LatestVersion = latestVersionString;
             }
         }
 
@@ -412,7 +345,7 @@ namespace RoslynPad.UI
         {
             get
             {
-                var exception = _telemetryProvider.LastError;
+                Exception? exception = null;
                 var aggregateException = exception as AggregateException;
                 return aggregateException?.Flatten() ?? exception;
             }
@@ -422,18 +355,7 @@ namespace RoslynPad.UI
 
         public IDelegateCommand ClearErrorCommand { get; }
 
-        public bool SendTelemetry
-        {
-            get => Settings.SendErrors; set
-            {
-                Settings.SendErrors = value;
-                OnPropertyChanged(nameof(SendTelemetry));
-            }
-        }
-
         public bool HasNoOpenDocuments => IsInitialized && OpenDocuments.Count == 0;
-
-        public IDelegateCommand ReportProblemCommand { get; }
 
         public double MinimumEditorFontSize => 8;
         public double MaximumEditorFontSize => 72;

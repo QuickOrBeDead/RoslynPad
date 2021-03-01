@@ -5,7 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:controls="clr-namespace:RoslynPad.Controls"
              xmlns:ui="clr-namespace:RoslynPad.UI;assembly=RoslynPad.Common.UI"
-             xmlns:editor="clr-namespace:RoslynPad.Editor;assembly=RoslynPad.Editor.Windows"
+             xmlns:editor="clr-namespace:RoslynPad.Editor;assembly=RoslynPad.Editor"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance ui:OpenDocumentViewModel}">
     <FrameworkElement.InputBindings>
@@ -58,13 +58,6 @@
                                 <Style TargetType="Image">
                                     <Setter Property="Source"
                                             Value="{StaticResource Run}" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsLiveMode}"
-                                                     Value="True">
-                                            <Setter Property="Source"
-                                                    Value="{StaticResource Rocket}" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
                                 </Style>
                             </Image.Style>
                         </Image>
@@ -75,28 +68,6 @@
                                      Visibility="{Binding IsRunning, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     </Grid>
                 </Button>
-                <Menu Background="Transparent">
-                    <MenuItem Header="▾"
-                              Padding="0"
-                              FontFamily="Segoe UI Symbol">
-                        <MenuItem Command="{Binding ToggleLiveModeCommand}"
-                                  Icon="{StaticResource Rocket}">
-                            <MenuItem.Style>
-                                <Style TargetType="MenuItem">
-                                    <Setter Property="Header"
-                                            Value="Live Mode" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsLiveMode}"
-                                                     Value="True">
-                                            <Setter Property="Header"
-                                                    Value="Turn off Live Mode" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </MenuItem.Style>
-                        </MenuItem>
-                    </MenuItem>
-                </Menu>
                 <Grid Visibility="{Binding HasReportedProgress, Converter={StaticResource BooleanToVisibilityConverter}}"
                       Width="60"
                       Margin="5, 0" >
@@ -264,8 +235,7 @@
 
             <TabControl Grid.Column="0"
                         Grid.Row="3"
-                        TabStripPlacement="Bottom"
-                        SelectionChanged="OnTabSelectionChanged">
+                        TabStripPlacement="Bottom">
                 <TabItem Header="Results">
                     <DockPanel Grid.IsSharedSizeScope="True">
                         <ScrollViewer DockPanel.Dock="Top"
@@ -367,9 +337,6 @@
                         </controls:TreeListView>
                     </DockPanel>
                 </TabItem>
-                <TabItem Name="ILViewerTab"
-                         Header="IL"
-                         IsSelected="{Binding ShowIL}" />
             </TabControl>
         </Grid>
     </DockPanel>

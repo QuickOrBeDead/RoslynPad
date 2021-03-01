@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>RoslynPad.Editor</RootNamespace>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net5.0-windows</TargetFramework>
     <DefineConstants>$(DefineConstants);AVALONIA</DefineConstants>
     <Version>$(EditorPackageVersion)</Version>
     <Description>Provides a Roslyn-based code editor using AvaloniaEdit (Avalonia platform) with completion, diagnostics, and quick actions</Description>
-    <NoWarn>NU5104</NoWarn>
+    <NoWarn>NU5104;8600;8601;8602</NoWarn>
     <IsPackable>true</IsPackable>
   </PropertyGroup>
   <ItemGroup>
@@ -14,12 +14,11 @@
     <Compile Update="**\*.xaml.cs" SubType="Code" DependentUpon="%(Filename)" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
-    <PackageReference Include="Avalonia.AvaloniaEdit" Version="0.9.0-preview1" />
-    <PackageReference Include="System.Reactive.Linq" Version="4.3.1" />
+    <PackageReference Include="Avalonia" Version="0.10.0" />
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="0.10.0" />
+    <PackageReference Include="System.Reactive.Linq" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\RoslynPad.Roslyn.Avalonia\RoslynPad.Roslyn.Avalonia.csproj" />
     <ProjectReference Include="..\RoslynPad.Roslyn\RoslynPad.Roslyn.csproj" />
   </ItemGroup>
   <ItemGroup>

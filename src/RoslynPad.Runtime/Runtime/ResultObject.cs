@@ -161,7 +161,7 @@ namespace RoslynPad.Runtime
                         PopulateChildren(o, targetQuotas, members, headerPrefix);
                         var enumerable = new ResultObject(o, targetQuotas, headerPrefix);
                         enumerable.InitializeEnumerable(headerPrefix, e, targetQuotas);
-                        Children = Children.Concat(new[] { enumerable }).ToList();
+                        Children = Children!.Concat(new[] { enumerable }).ToList()!;
                     }
                     else
                     {
@@ -303,7 +303,7 @@ namespace RoslynPad.Runtime
             {
                 var currentName = GetSimpleTypeName(type);
                 typeName = typeName != null ? currentName + "+" + typeName : currentName;
-                type = type.DeclaringType;
+                type = type.DeclaringType!;
             } while (type != null);
 
             typeName = $"{typeName} ({ns})";
@@ -467,7 +467,7 @@ namespace RoslynPad.Runtime
         }
 
         // avoids WPF PropertyDescriptor binding leaks
-        public event PropertyChangedEventHandler PropertyChanged
+        public event PropertyChangedEventHandler? PropertyChanged
         {
             add { }
             remove { }

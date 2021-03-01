@@ -777,7 +777,7 @@ namespace RoslynPad.Roslyn.CodeFixes
                                             attribute.Languages.Length == 0 ||
                                             attribute.Languages.Contains(language))
                                         {
-                                            builder.Add((CodeFixProvider)Activator.CreateInstance(typeInfo.AsType()));
+                                            builder.Add((CodeFixProvider)Activator.CreateInstance(typeInfo.AsType())!);
                                         }
                                     }
                                 }

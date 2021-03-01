@@ -208,7 +208,9 @@ namespace RoslynPad.Roslyn.LanguageServices.ChangeSignature
 
         public object ViewModel
         {
+#pragma warning disable CS8603 // Possible null reference return.
             get => DataContext; set
+#pragma warning restore CS8603 // Possible null reference return.
             {
                 DataContext = value;
                 _viewModel = (ChangeSignatureDialogViewModel)value;

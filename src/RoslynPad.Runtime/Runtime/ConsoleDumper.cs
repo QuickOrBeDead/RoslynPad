@@ -1,13 +1,13 @@
-﻿using System;
-using System.Globalization;
-using System.IO;
-using System.Runtime.Serialization.Json;
-using System.Text;
-using System.Threading;
-using System.Xml;
-
-namespace RoslynPad.Runtime
+﻿namespace RoslynPad.Runtime
 {
+    using System;
+    using System.Globalization;
+    using System.IO;
+    using System.Runtime.Serialization.Json;
+    using System.Text;
+    using System.Threading;
+    using System.Xml;
+
     internal interface IConsoleDumper
     {
         bool SupportsRedirect { get; }
@@ -209,7 +209,7 @@ namespace RoslynPad.Runtime
 
                 using (var jsonWriter = CreateJsonWriter())
                 {
-                    jsonWriter.WriteStartElement("root", "");
+                    jsonWriter.WriteStartElement("root", string.Empty);
                     jsonWriter.WriteAttributeString("type", "object");
                     jsonWriter.WriteElementString("$type", _progressResultTypeName);
                     jsonWriter.WriteElementString("p", jsonValue);
@@ -366,7 +366,7 @@ namespace RoslynPad.Runtime
                 _header = header;
             }
 
-            public override void Write(string value)
+            public override void Write(string? value)
             {
                 if (string.Equals(Environment.NewLine, value, StringComparison.Ordinal))
                 {
@@ -417,7 +417,7 @@ namespace RoslynPad.Runtime
                 Dump(value);
             }
 
-            private void Dump(object value)
+            private void Dump(object? value)
             {
                 _dumper.Dump(new DumpData(value, _header, DumpQuotas.Default));
             }

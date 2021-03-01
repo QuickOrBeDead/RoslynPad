@@ -1,20 +1,22 @@
-﻿using System;
-using System.ComponentModel;
-using System.Composition.Hosting;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Xml.Linq;
-using Avalon.Windows.Controls;
-using AvalonDock;
-using AvalonDock.Layout.Serialization;
-using RoslynPad.UI;
-using RoslynPad.Utilities;
-
-namespace RoslynPad
+﻿namespace RoslynPad
 {
+    using System;
+    using System.ComponentModel;
+    using System.Composition.Hosting;
+    using System.Globalization;
+    using System.IO;
+    using System.Threading.Tasks;
+    using System.Windows;
+    using System.Xml.Linq;
+
+    using Avalon.Windows.Controls;
+
+    using AvalonDock;
+    using AvalonDock.Layout.Serialization;
+
+    using RoslynPad.UI;
+    using RoslynPad.Utilities;
+
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
@@ -78,7 +80,9 @@ namespace RoslynPad
             }
             else
             {
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
                 e.Cancel = !_isClosed;
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
             }
         }
 
@@ -146,6 +150,7 @@ namespace RoslynPad
             {
                 serializer.Serialize(writer);
             }
+
             document.Root?.Element("FloatingWindows")?.Remove();
             _viewModel.Settings.DockLayout = document.ToString();
         }
@@ -156,7 +161,7 @@ namespace RoslynPad
 
             Application.Current.Shutdown();
         }
-        
+
         private async void DockingManager_OnDocumentClosing(object sender, DocumentClosingEventArgs e)
         {
             e.Cancel = true;
@@ -168,13 +173,12 @@ namespace RoslynPad
         {
             if (_viewModel.LastError == null) return;
 
-            TaskDialog.ShowInline(this, "Unhandled Exception",
-                _viewModel.LastError.ToAsyncString(), string.Empty, TaskDialogButtons.Close);
-        }
-
-        private void ViewUpdateClick(object sender, RoutedEventArgs e)
-        {
-            Task.Run(() => Process.Start("https://roslynpad.net/"));
+            TaskDialog.ShowInline(
+                this,
+                "Unhandled Exception",
+                _viewModel.LastError.ToAsyncString(),
+                string.Empty,
+                TaskDialogButtons.Close);
         }
     }
 }

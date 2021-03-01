@@ -8,7 +8,7 @@
         xmlns:av="http://schemas.codeplex.com/wpfcontrib/xaml/presentation"
         xmlns:ui="clr-namespace:RoslynPad.UI;assembly=RoslynPad.Common.UI"
         mc:Ignorable="d"
-        d:DataContext="{d:DesignInstance ui:MainViewModel}"
+        d:DataContext="{d:DesignInstance roslynPad:MainViewModel}"
         TextOptions.TextFormattingMode="Display"
         UseLayoutRounding="True"
         Title="{Binding WindowTitle, Mode=OneTime}"
@@ -150,26 +150,6 @@
                                Height="16" />
                     </ToggleButton>
 
-                    <Button Margin="20 0 0 0"
-                            BorderThickness="0"
-                            Background="Gold"
-                            Cursor="Hand"
-                            ToolTip="Update Available"
-                            ToolTipService.Placement="Top"
-                            Visibility="{Binding HasUpdate, Converter={StaticResource BooleanToVisibilityConverter}}"
-                            Click="ViewUpdateClick">
-                        <Button.Content>
-                            <StackPanel Orientation="Horizontal">
-                                <Image Source="{StaticResource Update}"
-                                       Width="16"
-                                       Height="16" />
-                                <TextBlock Margin="5 0 0 0">
-                                    Update Available
-                                </TextBlock>
-                            </StackPanel>
-                        </Button.Content>
-                    </Button>
-
                     <Image Margin="20 0 0 0"
                            Source="{StaticResource FontSize}"
                            Height="16"
@@ -187,26 +167,6 @@
                             Value="{Binding EditorFontSize}" />
                     <TextBlock Text="{Binding EditorFontSize}"
                                Margin="5 0 0 0" />
-
-                    <Menu Margin="20 0 0 0"
-                          Background="Transparent">
-                        <MenuItem Padding="0"
-                                  BorderThickness="0"
-                                  ToolTip="Send Feedback"
-                                  ToolTipService.Placement="Top">
-                            <MenuItem.Header>
-                                <Image Source="{StaticResource Feedback}"
-                                       Width="16"
-                                       Height="16" />
-                            </MenuItem.Header>
-                            <MenuItem IsCheckable="True"
-                                      IsChecked="{Binding SendTelemetry}"
-                                      Header="Send Telemetry"
-                                      ToolTip="Send errors to the author (stack traces of internal RoslynPad errors - not your code)" />
-                            <MenuItem Header="Report a problem..."
-                                      Command="{Binding ReportProblemCommand}" />
-                        </MenuItem>
-                    </Menu>
                 </StackPanel>
             </Grid>
         </DockPanel>

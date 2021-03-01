@@ -1,23 +1,24 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using Avalon.Windows.Controls;
-using ICSharpCode.AvalonEdit.Document;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.Text;
-using RoslynPad.Controls;
-using RoslynPad.Editor;
-using RoslynPad.Runtime;
-using RoslynPad.UI;
-
-namespace RoslynPad
+﻿namespace RoslynPad
 {
+    using System;
+    using System.Linq;
+    using System.Text;
+    using System.Threading;
+    using System.Windows;
+    using System.Windows.Controls;
+    using System.Windows.Input;
+    using System.Windows.Media;
+
+    using Avalon.Windows.Controls;
+
+    using ICSharpCode.AvalonEdit.Document;
+
+    using Microsoft.CodeAnalysis.Text;
+
+    using RoslynPad.Editor;
+    using RoslynPad.Runtime;
+    using RoslynPad.UI;
+
     public partial class DocumentView : IDisposable
     {
         private readonly SynchronizationContext? _syncContext;
@@ -75,10 +76,15 @@ namespace RoslynPad
 
             var documentText = await _viewModel.LoadText().ConfigureAwait(true);
 
-            var documentId = Editor.Initialize(_viewModel.MainViewModel.RoslynHost, new ClassificationHighlightColors(),
-                _viewModel.WorkingDirectory, documentText);
+            var documentId = Editor.Initialize(
+                _viewModel.MainViewModel.RoslynHost,
+                new ClassificationHighlightColors(),
+                _viewModel.WorkingDirectory,
+                documentText);
 
-            _viewModel.Initialize(documentId, OnError,
+            _viewModel.Initialize(
+                documentId,
+                OnError,
                 () => new TextSpan(Editor.SelectionStart, Editor.SelectionLength),
                 this);
 
@@ -298,18 +304,6 @@ namespace RoslynPad
         private void ScrollViewer_OnScrollChanged(object sender, ScrollChangedEventArgs e)
         {
             HeaderScroll.ScrollToHorizontalOffset(e.HorizontalOffset);
-        }
-
-        private void OnTabSelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (ILViewerTab.IsSelected && ILViewerTab.Content == null)
-            {
-                var ilViewer = new ILViewer();
-                ilViewer.SetBinding(TextElement.FontSizeProperty,
-                    nameof(_viewModel.MainViewModel) + "." + nameof(_viewModel.MainViewModel.EditorFontSize));
-                ilViewer.SetBinding(ILViewer.TextProperty, nameof(_viewModel.ILText));
-                ILViewerTab.Content = ilViewer;
-            }
         }
     }
 }

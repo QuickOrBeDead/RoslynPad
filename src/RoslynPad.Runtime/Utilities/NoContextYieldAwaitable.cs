@@ -35,7 +35,7 @@ namespace RoslynPad.Utilities
 
             private static readonly WaitCallback s_waitCallbackRunAction = RunAction;
 
-            private static void RunAction(object state) => ((Action)state)();
+            private static void RunAction(object? state) => ((Action)state!)();
 
             public void GetResult() { }
         }

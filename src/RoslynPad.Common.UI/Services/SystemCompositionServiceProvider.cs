@@ -26,7 +26,7 @@ namespace RoslynPad.UI
         public static T GetService<T>([NotNull] this IServiceProvider serviceProvider)
         {
             if (serviceProvider == null) throw new ArgumentNullException(nameof(serviceProvider));
-            return (T)serviceProvider.GetService(typeof(T));
+            return (T)serviceProvider.GetService(typeof(T))!;
         }
     }
 }

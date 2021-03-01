@@ -148,7 +148,9 @@ namespace RoslynPad.Roslyn.LanguageServices.PickMembers
 
         public object ViewModel
         {
+#pragma warning disable 8603
             get => DataContext;
+#pragma warning restore 8603
             set
             {
                 _viewModel = (PickMembersDialogViewModel)value;

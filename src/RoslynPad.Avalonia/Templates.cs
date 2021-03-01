@@ -11,7 +11,7 @@ namespace Avalonia
         public static readonly AvaloniaProperty<DataTemplate> HeaderTemplateProperty =
             AvaloniaProperty.RegisterAttached<Control, DataTemplate>("HeaderTemplate", typeof(Templates));
 
-        public static DataTemplate GetHeaderTemplate(Control control) => control.GetValue(HeaderTemplateProperty);
+        public static DataTemplate GetHeaderTemplate(Control control) => (DataTemplate)control.GetValue(HeaderTemplateProperty);
         public static void SetHeaderTemplate(Control control, DataTemplate value) => control.SetValue(HeaderTemplateProperty, value);
     }
 }

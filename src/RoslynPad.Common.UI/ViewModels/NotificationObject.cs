@@ -74,10 +74,12 @@ namespace RoslynPad.UI
             }
         }
 
-        public IEnumerable GetErrors(string propertyName)
+        public IEnumerable GetErrors(string? propertyName)
         {
             List<ErrorInfo>? errors = null;
+#pragma warning disable CS8604 // Possible null reference argument.
             _propertyErrors?.TryGetValue(propertyName, out errors);
+#pragma warning restore CS8604 // Possible null reference argument.
             return errors?.AsEnumerable() ?? Array.Empty<ErrorInfo>();
         }
 

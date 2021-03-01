@@ -238,7 +238,7 @@ namespace RoslynPad.Roslyn.Scripting
             var entryPointMethodName = entryPoint.MetadataName;
 
             var entryPointType = assembly.GetType(entryPointTypeName, throwOnError: true, ignoreCase: false);
-            return entryPointType.GetTypeInfo().GetDeclaredMethod(entryPointMethodName);
+            return entryPointType!.GetTypeInfo().GetDeclaredMethod(entryPointMethodName)!;
         }
 
         private static string BuildQualifiedName(

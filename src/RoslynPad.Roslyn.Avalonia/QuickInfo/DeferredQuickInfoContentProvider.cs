@@ -186,7 +186,9 @@ namespace RoslynPad.Roslyn.QuickInfo
 
             public object Create()
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 var image = new DrawingPresenter
+#pragma warning restore CS0618 // Type or member is obsolete
                 {
                     Width = 16,
                     Height = 16,

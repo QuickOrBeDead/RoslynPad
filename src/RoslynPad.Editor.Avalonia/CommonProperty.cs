@@ -36,7 +36,7 @@ namespace RoslynPad.Editor
             if (onChangedLocal != null)
             {
                 property.Changed.AddClassHandler<TOwner>(
-                    (o, e) => onChangedLocal(o, new CommonPropertyChangedArgs<TValue>((TValue)e.OldValue, (TValue)e.NewValue)));
+                    (o, e) => onChangedLocal(o, new CommonPropertyChangedArgs<TValue>((TValue)e.OldValue!, (TValue)e.NewValue!)));
             }
 
             return property;

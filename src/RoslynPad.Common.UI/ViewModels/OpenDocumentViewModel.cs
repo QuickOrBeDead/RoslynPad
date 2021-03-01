@@ -10,7 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Formatting;
-using Microsoft.CodeAnalysis.Options;
 using Microsoft.CodeAnalysis.Rename;
 using Microsoft.CodeAnalysis.Scripting;
 using Microsoft.CodeAnalysis.Text;
@@ -26,11 +25,8 @@ namespace RoslynPad.UI
     [Export]
     public class OpenDocumentViewModel : NotificationObject
     {
-        private const string DefaultILText = "// Run to view IL";
-
         private readonly IServiceProvider _serviceProvider;
         private readonly IAppDispatcher _dispatcher;
-        private readonly ITelemetryProvider _telemetryProvider;
         private readonly IPlatformsFactory _platformsFactory;
         private readonly IExecutionHost _executionHost;
         private readonly ObservableCollection<IResultObject> _results;
@@ -44,10 +40,7 @@ namespace RoslynPad.UI
         private IDisposable? _viewDisposable;
         private Action<ExceptionResultObject?>? _onError;
         private Func<TextSpan>? _getSelection;
-        private string? _ilText;
         private bool _isInitialized;
-        private bool _isLiveMode;
-        private Timer? _liveModeTimer;
         private DocumentViewModel? _document;
         private bool _isRestoring;
         private IReadOnlyList<ExecutionPlatform>? _availablePlatforms;
@@ -64,33 +57,6 @@ namespace RoslynPad.UI
 
         public IEnumerable<object> Results => _results;
         internal IEnumerable<IResultObject> ResultsInternal => _results;
-
-        public IDelegateCommand ToggleLiveModeCommand { get; }
-
-        public bool IsLiveMode
-        {
-            get => _isLiveMode;
-            private set
-            {
-                if (!SetProperty(ref _isLiveMode, value)) return;
-                RunCommand.RaiseCanExecuteChanged();
-
-                if (value)
-                {
-                    // ReSharper disable once UnusedVariable
-                    _ = Run();
-
-                    if (_liveModeTimer == null)
-                    {
-                        _liveModeTimer = new Timer(o => _dispatcher.InvokeAsync(() =>
-                        {
-                            // ReSharper disable once UnusedVariable
-                            var runTask = Run();
-                        }), null, Timeout.Infinite, Timeout.Infinite);
-                    }
-                }
-            }
-        }
 
         public DocumentViewModel? Document
         {
@@ -109,20 +75,13 @@ namespace RoslynPad.UI
             }
         }
 
-        public string ILText
-        {
-            get => _ilText ?? string.Empty;
-            private set => SetProperty(ref _ilText, value);
-        }
-
         [ImportingConstructor]
-        public OpenDocumentViewModel(IServiceProvider serviceProvider, MainViewModelBase mainViewModel, ICommandProvider commands, IAppDispatcher appDispatcher, ITelemetryProvider telemetryProvider)
+        public OpenDocumentViewModel(IServiceProvider serviceProvider, MainViewModelBase mainViewModel, ICommandProvider commands, IAppDispatcher appDispatcher)
         {
             Id = Guid.NewGuid().ToString("n");
             BuildPath = Path.Combine(Path.GetTempPath(), "roslynpad", "build", Id);
             Directory.CreateDirectory(BuildPath);
 
-            _telemetryProvider = telemetryProvider;
             _platformsFactory = serviceProvider.GetService<IPlatformsFactory>();
             _serviceProvider = serviceProvider;
             _results = new ObservableCollection<IResultObject>();
@@ -144,9 +103,6 @@ namespace RoslynPad.UI
             CommentSelectionCommand = commands.CreateAsync(() => CommentUncommentSelection(CommentAction.Comment));
             UncommentSelectionCommand = commands.CreateAsync(() => CommentUncommentSelection(CommentAction.Uncomment));
             RenameSymbolCommand = commands.CreateAsync(RenameSymbol);
-            ToggleLiveModeCommand = commands.Create(() => IsLiveMode = !IsLiveMode);
-
-            ILText = DefaultILText;
 
             var roslynHost = MainViewModel.RoslynHost;
 
@@ -162,7 +118,6 @@ namespace RoslynPad.UI
             _executionHost.Error += ExecutionHostOnError;
             _executionHost.ReadInput += ExecutionHostOnInputRequest;
             _executionHost.CompilationErrors += ExecutionHostOnCompilationErrors;
-            _executionHost.Disassembled += ExecutionHostOnDisassembled;
             _executionHost.RestoreStarted += OnRestoreStarted;
             _executionHost.RestoreCompleted += OnRestoreCompleted;
             _executionHost.RestoreMessage += AddResult;
@@ -300,11 +255,6 @@ namespace RoslynPad.UI
 
                 ResultsAvailable?.Invoke();
             });
-        }
-
-        private void ExecutionHostOnDisassembled(string il)
-        {
-            ILText = il;
         }
 
         public void SetDocument(DocumentViewModel? document)
@@ -456,11 +406,6 @@ namespace RoslynPad.UI
             {
                 await Task.Run(() => _executionHost?.TerminateAsync()).ConfigureAwait(false);
             }
-            catch (Exception e)
-            {
-                _telemetryProvider.ReportError(e);
-                throw;
-            }
             finally
             {
                 SetIsRunning(false);
@@ -505,9 +450,9 @@ namespace RoslynPad.UI
                 {
                     Process.Start(new ProcessStartInfo(new Uri("file://" + BuildPath).ToString()) { UseShellExecute = true });
                 }
-                catch (Exception ex)
+                catch
                 {
-                    _telemetryProvider.ReportError(ex);
+                    // Empty
                 }
             });
         }
@@ -660,11 +605,6 @@ namespace RoslynPad.UI
 
             StartExec();
 
-            if (!ShowIL)
-            {
-                ILText = DefaultILText;
-            }
-
             var cancellationToken = _runCts!.Token;
             try
             {
@@ -676,7 +616,7 @@ namespace RoslynPad.UI
                     if (_executionHostParameters.WorkingDirectory != WorkingDirectory)
                         _executionHostParameters.WorkingDirectory = WorkingDirectory;
 
-                    await _executionHost.ExecuteAsync(code, ShowIL, OptimizationLevel).ConfigureAwait(true);
+                    await _executionHost.ExecuteAsync(code, OptimizationLevel).ConfigureAwait(true);
                 }
             }
             catch (CompilationErrorException ex)
@@ -731,8 +671,27 @@ namespace RoslynPad.UI
                     return;
                 }
 
-                var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
-                var libraries = ParseReferences(syntaxRoot!);
+                var libraries = new List<LibraryRef>();
+
+                if (!document.Project.TryGetCompilation(out Compilation? compilation))
+                {
+                    compilation = await document.Project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
+                }
+
+                if (compilation != null)
+                {
+                    var syntaxTrees = compilation!.SyntaxTrees;
+                    foreach (var syntaxTree in syntaxTrees)
+                    {
+                        var syntaxRoot = await syntaxTree.GetRootAsync(cancellationToken).ConfigureAwait(false);
+                        libraries.AddRange(ParseReferences(syntaxRoot!));
+                    }
+                }
+                else
+                {
+                    var syntaxRoot = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
+                    libraries.AddRange(ParseReferences(syntaxRoot!));
+                }
 
                 var defaultReferences = Platform?.FrameworkVersion?.Major < 5
                     ? MainViewModel.DefaultReferencesCompat50
@@ -904,8 +863,6 @@ namespace RoslynPad.UI
 
         public bool HasReportedProgress => ReportedProgress.HasValue;
 
-        public bool ShowIL { get; set; }
-
         public event EventHandler? EditorFocus;
 
         private void OnEditorFocus()
@@ -916,11 +873,6 @@ namespace RoslynPad.UI
         public void OnTextChanged()
         {
             IsDirty = true;
-
-            if (IsLiveMode)
-            {
-                _liveModeTimer?.Change(MainViewModel.Settings.LiveModeDelayMs, Timeout.Infinite);
-            }
 
             UpdatePackages();
         }

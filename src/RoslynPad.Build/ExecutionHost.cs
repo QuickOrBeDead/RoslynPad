@@ -14,10 +14,8 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Scripting;
-using Mono.Cecil;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using RoslynPad.Build.ILDecompiler;
 using RoslynPad.NuGet;
 using RoslynPad.Roslyn;
 using RoslynPad.Roslyn.Scripting;
@@ -112,7 +110,6 @@ namespace RoslynPad.Build
         }
 
         public event Action<IList<CompilationErrorResultObject>>? CompilationErrors;
-        public event Action<string>? Disassembled;
         public event Action<ResultObject>? Dumped;
         public event Action<ExceptionResultObject>? Error;
         public event Action? ReadInput;
@@ -155,7 +152,7 @@ namespace RoslynPad.Build
             }
         }
 
-        public async Task ExecuteAsync(string code, bool disassemble, OptimizationLevel? optimizationLevel)
+        public async Task ExecuteAsync(string code, OptimizationLevel? optimizationLevel)
         {
             await new NoContextYieldAwaitable();
 
@@ -180,11 +177,6 @@ namespace RoslynPad.Build
                     return;
                 }
 
-                if (disassemble)
-                {
-                    Disassemble();
-                }
-
                 _executeCts = executeCts;
 
                 await RunProcess(_assemblyPath, cancellationToken);
@@ -200,15 +192,6 @@ namespace RoslynPad.Build
                     InitializeBuildPath(stop: false);
                 }
             }
-        }
-
-        private void Disassemble()
-        {
-            using var assembly = AssemblyDefinition.ReadAssembly(_assemblyPath);
-            var output = new PlainTextOutput();
-            var disassembler = new ReflectionDisassembler(output, false, CancellationToken.None);
-            disassembler.WriteModuleContents(assembly.MainModule);
-            Disassembled?.Invoke(output.ToString());
         }
 
         private string AssemblyExtension => Platform.IsCore ? "dll" : "exe";
@@ -267,7 +250,9 @@ namespace RoslynPad.Build
             {
                 return new ProcessStartInfo
                 {
+#pragma warning disable 8601
                     FileName = Platform.IsCore ? DotNetExecutable : assemblyPath,
+#pragma warning restore 8601
                     Arguments = $"\"{assemblyPath}\" --pid {CurrentPid.Value}",
                     WorkingDirectory = _parameters.WorkingDirectory,
                     CreateNoWindow = true,
@@ -324,7 +309,7 @@ namespace RoslynPad.Build
                             ProgressChanged?.Invoke(progress);
                             break;
                         default:
-                            Dumped?.Invoke(result);
+                            Dumped?.Invoke(result!);
                             break;
                     }
                 }

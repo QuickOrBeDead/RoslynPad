@@ -18,7 +18,6 @@ namespace RoslynPad.Build
         ImmutableArray<AnalyzerFileReference> Analyzers { get; }
 
         event Action<IList<CompilationErrorResultObject>>? CompilationErrors;
-        event Action<string>? Disassembled;
         event Action<ResultObject>? Dumped;
         event Action<ExceptionResultObject>? Error;
         event Action? ReadInput;
@@ -30,7 +29,7 @@ namespace RoslynPad.Build
         void UpdateLibraries(IList<LibraryRef> libraries);
 
         Task SendInputAsync(string input);
-        Task ExecuteAsync(string code, bool disassemble, OptimizationLevel? optimizationLevel);
+        Task ExecuteAsync(string code, OptimizationLevel? optimizationLevel);
         Task TerminateAsync();
     }
 

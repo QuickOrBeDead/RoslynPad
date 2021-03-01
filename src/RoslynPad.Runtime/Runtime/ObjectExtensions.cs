@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using RoslynPad.Annotations;
 
@@ -44,7 +43,7 @@ namespace RoslynPad.Runtime
         internal static event Action<DumpData>? Dumped;
     }
 
-    internal struct DumpData
+    internal readonly struct DumpData
     {
         public object? Object { get; }
         public string? Header { get; }
@@ -58,7 +57,7 @@ namespace RoslynPad.Runtime
         }
     }
 
-    internal struct DumpQuotas
+    internal readonly struct DumpQuotas
     {
         internal const int DefaultMaxDepth = 4;
         internal const int DefaultMaxExpandedDepth = 1;

@@ -1,9 +1,9 @@
-﻿using System;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
-
-namespace RoslynPad.Runtime
+﻿namespace RoslynPad.Runtime
 {
+    using System;
+    using System.Diagnostics.CodeAnalysis;
+    using System.Runtime.InteropServices;
+
     internal static class WindowsNativeMethods
     {
         internal static void DisableWer()
@@ -22,7 +22,6 @@ namespace RoslynPad.Runtime
         private static extern ErrorMode GetErrorMode();
 
         [Flags]
-        [SuppressMessage("ReSharper", "InconsistentNaming")]
         private enum ErrorMode
         {
             SEM_FAILCRITICALERRORS = 0x0001,

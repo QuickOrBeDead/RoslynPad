@@ -34,7 +34,7 @@ namespace RoslynPad.Runtime
             var thread = new Thread(() =>
             {
                 var dispatcher = currentDispatcherProperty.GetValue(null);
-                tcs.SetResult(dispatcher);
+                tcs.SetResult(dispatcher!);
                 runMethod();
             });
 
@@ -88,7 +88,7 @@ namespace RoslynPad.Runtime
         [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
         public struct SynchronizationContextAwaiter : INotifyCompletion
         {
-            private static readonly SendOrPostCallback _postCallback = state => ((Action)state)();
+            private static readonly SendOrPostCallback _postCallback = state => ((Action)state!)();
 
             private readonly Task<SynchronizationContext> _task;
 

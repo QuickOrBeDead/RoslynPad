@@ -13,9 +13,7 @@ namespace RoslynPad.UI
         void LoadFrom(string path);
         string GetDefaultDocumentPath();
 
-        bool SendErrors { get; set; }
         bool EnableBraceCompletion { get; set; }
-        string? LatestVersion { get; set; }
         string? WindowBounds { get; set; }
         string? DockLayout { get; set; }
         string? WindowState { get; set; }
@@ -39,7 +37,6 @@ namespace RoslynPad.UI
         private const int EditorFontSizeDefault = 12;
         private const string DefaultConfigFileName = "RoslynPad.json";
 
-        private readonly ITelemetryProvider? _telemetryProvider;
         private string? _path;
 
         private bool _sendErrors;
@@ -61,9 +58,8 @@ namespace RoslynPad.UI
         private bool _formatDocumentOnComment = true;
 
         [ImportingConstructor]
-        public ApplicationSettings([Import(AllowDefault = true)] ITelemetryProvider telemetryProvider)
+        public ApplicationSettings()
         {
-            _telemetryProvider = telemetryProvider;
             _defaultPlatformName = string.Empty;
         }
 
@@ -210,7 +206,6 @@ namespace RoslynPad.UI
             if (string.IsNullOrEmpty(documentsPath))
             {
                 documentsPath = "/";
-                _telemetryProvider?.ReportError(new InvalidOperationException("Unable to locate the user documents folder; Using root"));
             }
 
             return Path.Combine(documentsPath, "RoslynPad");
@@ -237,10 +232,9 @@ namespace RoslynPad.UI
                 using var reader = File.OpenText(path);
                 serializer.Populate(reader, this);
             }
-            catch (Exception e)
+            catch
             {
                 LoadDefaultSettings();
-                _telemetryProvider?.ReportError(e);
             }
         }
 
@@ -262,9 +256,9 @@ namespace RoslynPad.UI
                 using var writer = File.CreateText(_path);
                 serializer.Serialize(writer, this);
             }
-            catch (Exception e)
+            catch
             {
-                _telemetryProvider?.ReportError(e);
+                // Empty
             }
         }
     }

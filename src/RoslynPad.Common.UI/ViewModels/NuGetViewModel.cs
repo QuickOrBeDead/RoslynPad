@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Composition;
-using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
@@ -35,12 +34,12 @@ namespace RoslynPad.UI
         public string GlobalPackageFolder { get; }
 
         [ImportingConstructor]
-        public NuGetViewModel([Import(AllowDefault = true)] ITelemetryProvider? telemetryProvider, IApplicationSettings appSettings)
+        public NuGetViewModel(IApplicationSettings appSettings)
         {
             try
             {
                 var settings = LoadSettings();
-                ConfigPath = settings.ConfigFilePath;
+                ConfigPath = settings.GetConfigFilePaths().First();
                 GlobalPackageFolder = SettingsUtility.GetGlobalPackagesFolder(settings);
 
                 DefaultCredentialServiceUtility.SetupDefaultCredentialService(NullLogger.Instance, nonInteractive: false);
@@ -69,11 +68,11 @@ namespace RoslynPad.UI
                     {
                         settings = new Settings(appSettings.GetDefaultDocumentPath(), "RoslynPad.nuget.config");
                     }
-                    catch (NuGetConfigurationException ex)
+                    catch (NuGetConfigurationException)
                     {
                         if (i == retries)
                         {
-                            telemetryProvider?.ReportError(ex);
+                            
                             throw;
                         }
                     }
@@ -178,7 +177,6 @@ namespace RoslynPad.UI
     public sealed class NuGetDocumentViewModel : NotificationObject
     {
         private readonly NuGetViewModel _nuGetViewModel;
-        private readonly ITelemetryProvider _telemetryProvider;
 
         private string _searchTerm;
         private bool _isSearching;
@@ -195,11 +193,10 @@ namespace RoslynPad.UI
 
         [ImportingConstructor]
 #pragma warning disable CS8618 // Non-nullable field is uninitialized.
-        public NuGetDocumentViewModel(NuGetViewModel nuGetViewModel, ICommandProvider commands, ITelemetryProvider telemetryProvider)
+        public NuGetDocumentViewModel(NuGetViewModel nuGetViewModel, ICommandProvider commands)
 #pragma warning restore CS8618 // Non-nullable field is uninitialized.
         {
             _nuGetViewModel = nuGetViewModel;
-            _telemetryProvider = telemetryProvider;
 
             InstallPackageCommand = commands.Create<PackageData>(InstallPackage);
         }
@@ -289,8 +286,8 @@ namespace RoslynPad.UI
                     IsPackagesMenuOpen = Packages.Count > 0;
                 }
                 catch (Exception e) when (!(e is OperationCanceledException))
-                {
-                    _telemetryProvider.ReportError(e);
+                {  
+                    // Empty
                 }
             }
             finally

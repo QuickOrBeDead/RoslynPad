@@ -124,7 +124,9 @@ namespace RoslynPad.Roslyn.LanguageServices.ExtractInterface
 
         public object ViewModel
         {
+#pragma warning disable 8603
             get => DataContext;
+#pragma warning restore 8603
             set
             {
                 DataContext = value;

@@ -47,26 +47,26 @@ namespace RoslynPad
 
         protected override void OnDataContextChanged(EventArgs e)
         {
-            _viewModel = (MainViewModel)DataContext;
+            _viewModel = (MainViewModel)DataContext!;
         }
 
 
         private void OnDocumentClick(object? sender, RoutedEventArgs e)
         {
-            OpenDocument(e.Source);
+            OpenDocument(e.Source!);
         }
 
         private void OnDocumentKeyDown(object? sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
-                OpenDocument(e.Source);
+                OpenDocument(e.Source!);
             }
         }
 
         private void OpenDocument(object source)
         {
-            var documentViewModel = (DocumentViewModel)((Control)source).DataContext;
+            var documentViewModel = (DocumentViewModel)((Control)source).DataContext!;
             _viewModel.OpenDocument(documentViewModel);
         }
     }

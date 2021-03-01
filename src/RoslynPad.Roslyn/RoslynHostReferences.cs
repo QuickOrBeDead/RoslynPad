@@ -56,7 +56,9 @@ namespace RoslynPad.Roslyn
 
             foreach (var type in typeNamespaceImports!.WhereNotNull())
             {
+#pragma warning disable CS8604 // Possible null reference argument.
                 importsArray = importsArray.Add(type.Namespace);
+#pragma warning restore CS8604 // Possible null reference argument.
                 var location = type.Assembly.Location;
                 referenceLocations = referenceLocations.SetItem(location, string.Empty);
             }
