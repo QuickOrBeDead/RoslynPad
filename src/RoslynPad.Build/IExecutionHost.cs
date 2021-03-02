@@ -19,6 +19,7 @@ namespace RoslynPad.Build
 
         event Action<IList<CompilationErrorResultObject>>? CompilationErrors;
         event Action<ResultObject>? Dumped;
+        event Action<DictionaryListResultObject>? DictionaryListDumped;
         event Action<ExceptionResultObject>? Error;
         event Action? ReadInput;
         event Action? RestoreStarted;

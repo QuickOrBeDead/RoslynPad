@@ -111,6 +111,7 @@ namespace RoslynPad.Build
 
         public event Action<IList<CompilationErrorResultObject>>? CompilationErrors;
         public event Action<ResultObject>? Dumped;
+        public event Action<DictionaryListResultObject>? DictionaryListDumped;
         public event Action<ExceptionResultObject>? Error;
         public event Action? ReadInput;
         public event Action? RestoreStarted;
@@ -308,6 +309,9 @@ namespace RoslynPad.Build
                         case ProgressResultObject progress:
                             ProgressChanged?.Invoke(progress);
                             break;
+                        case DictionaryListResultObject dictionaryList:
+                            DictionaryListDumped?.Invoke(dictionaryList);
+                            break;
                         default:
                             Dumped?.Invoke(result!);
                             break;
@@ -365,9 +369,13 @@ namespace RoslynPad.Build
         {
             var lineSpan = diagnostic.Location.GetLineSpan();
 
-            var result = CompilationErrorResultObject.Create(diagnostic.Severity.ToString(),
-                    diagnostic.Id, diagnostic.GetMessage(),
-                    lineSpan.StartLinePosition.Line, lineSpan.StartLinePosition.Character);
+            var result = CompilationErrorResultObject.Create(
+                diagnostic.Severity.ToString(),
+                diagnostic.Id,
+                diagnostic.GetMessage(),
+                lineSpan.Path,
+                lineSpan.StartLinePosition.Line,
+                lineSpan.StartLinePosition.Character);
             return result;
         }
 

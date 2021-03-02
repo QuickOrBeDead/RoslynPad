@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Reflection;
@@ -22,7 +21,6 @@ namespace RoslynPad.Runtime
     [DataContract]
     [KnownType(typeof(ExceptionResultObject))]
     [KnownType(typeof(InputReadRequest))]
-    [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Local")]
     internal class ResultObject : INotifyPropertyChanged, IResultObject
     {
         private static readonly HashSet<string> _irrelevantEnumerableProperties = new HashSet<string>
@@ -190,7 +188,7 @@ namespace RoslynPad.Runtime
                 .ToArray();
         }
 
-        private IEnumerable? GetEnumerable(object o, Type type)
+        private static IEnumerable? GetEnumerable(object o, Type type)
         {
             if (o is IEnumerable e && !_doNotTreatAsEnumerableTypeNames.Contains(type.Name))
             {
@@ -475,7 +473,6 @@ namespace RoslynPad.Runtime
     }
 
     [DataContract]
-    [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Local")]
     internal class ExceptionResultObject : ResultObject
     {
         // for serialization
@@ -538,7 +535,27 @@ namespace RoslynPad.Runtime
     }
 
     [DataContract]
-    [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Local")]
+    internal class DictionaryListResultObject : ResultObject
+    {
+        // for serialization
+        // ReSharper disable once UnusedMember.Local
+        private DictionaryListResultObject()
+            : this(new List<IDictionary<string, object?>>(0))
+        {
+        }
+
+        private DictionaryListResultObject(IList<IDictionary<string, object?>> items)
+        {
+            Items = items;
+        }
+
+        public static DictionaryListResultObject Create(IList<IDictionary<string, object?>> items) => new DictionaryListResultObject(items);
+
+        [DataMember(Name = "i")]
+        public IList<IDictionary<string, object?>>? Items { get; private set; }
+    }
+
+    [DataContract]
     internal class CompilationErrorResultObject : IResultObject
     {
         // for serialization
@@ -548,12 +565,15 @@ namespace RoslynPad.Runtime
             ErrorCode = string.Empty;
             Severity = string.Empty;
             Message = string.Empty;
+            File = string.Empty;
         }
 
         [DataMember(Name = "ec")]
         public string ErrorCode { get; private set; }
         [DataMember(Name = "sev")]
         public string Severity { get; private set; }
+        [DataMember(Name = "f")]
+        public string File { get; private set; }
         [DataMember(Name = "l")]
         public int Line { get; private set; }
         [DataMember(Name = "col")]
@@ -561,13 +581,20 @@ namespace RoslynPad.Runtime
         [DataMember(Name = "m")]
         public string Message { get; private set; }
 
-        public static CompilationErrorResultObject Create(string severity, string errorCode, string message, int line, int column)
+        public static CompilationErrorResultObject Create(
+            string severity, 
+            string errorCode, 
+            string message, 
+            string file,
+            int line, 
+            int column)
         {
             return new CompilationErrorResultObject
             {
                 ErrorCode = errorCode,
                 Severity = severity,
                 Message = message,
+                File = file,
                 // 0 to 1-based
                 Line = line + 1,
                 Column = column + 1,

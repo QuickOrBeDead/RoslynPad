@@ -1,6 +1,7 @@
 ﻿namespace RoslynPad.Runtime
 {
     using System;
+    using System.Collections.Generic;
     using System.Globalization;
     using System.IO;
     using System.Runtime.Serialization.Json;
@@ -11,12 +12,20 @@
     internal interface IConsoleDumper
     {
         bool SupportsRedirect { get; }
+
         TextWriter CreateWriter(string? header = null);
+
         TextReader CreateReader();
+
         void Dump(DumpData data);
+
         void DumpException(Exception exception);
+
         void Flush();
+
         void DumpProgress(ProgressResultObject result);
+
+        void DumpDictionaryList(DictionaryListResultObject result);
     }
 
     internal class DirectConsoleDumper : IConsoleDumper
@@ -65,7 +74,7 @@
             {
                 if (indent > 0)
                 {
-                    Console.Write("".PadLeft(indent));
+                    Console.Write(string.Empty.PadLeft(indent));
                 }
 
                 Console.Write(resultObject.HasChildren ? "+ " : "  ");
@@ -98,6 +107,11 @@
 
         public void DumpProgress(ProgressResultObject result)
             => throw new NotSupportedException($"Dumping progress is not supported with {nameof(DirectConsoleDumper)}");
+
+        public void DumpDictionaryList(DictionaryListResultObject result)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     internal class JsonConsoleDumper : IConsoleDumper, IDisposable
@@ -109,6 +123,7 @@
         private readonly string _exceptionResultTypeName;
         private readonly string _inputReadRequestTypeName;
         private readonly string _progressResultTypeName;
+        private readonly string _dictionaryListResultTypeName;
 
         private readonly Stream _stream;
 
@@ -126,6 +141,7 @@
             _exceptionResultTypeName = $"{typeof(ExceptionResultObject).FullName}, {assemblyName}";
             _inputReadRequestTypeName = $"{typeof(InputReadRequest).FullName}, {assemblyName}";
             _progressResultTypeName = $"{typeof(ProgressResultObject).FullName}, {assemblyName}";
+            _dictionaryListResultTypeName = $"{typeof(DictionaryListResultObject).FullName}, {assemblyName}";
         }
 
         private XmlDictionaryWriter CreateJsonWriter()
@@ -220,6 +236,32 @@
             }
         }
 
+        public void DumpDictionaryList(DictionaryListResultObject result)
+        {
+            lock (_lock)
+            {
+                using (var jsonWriter = CreateJsonWriter())
+                {
+                    jsonWriter.WriteStartElement("root", string.Empty);
+                    jsonWriter.WriteAttributeString("type", "object");
+                    jsonWriter.WriteElementString("$type", _dictionaryListResultTypeName);
+
+                    jsonWriter.WriteStartElement("i");
+                    jsonWriter.WriteAttributeString("type", "array");
+
+                    foreach (var item in result.Items)
+                    {
+                        WriteDictionary(jsonWriter, item);
+                    }
+
+                    jsonWriter.WriteEndElement();
+                    jsonWriter.WriteEndElement();
+                }
+
+                DumpNewLine();
+            }
+        }
+
         public void Flush()
         {
             _stream.Flush();
@@ -247,7 +289,7 @@
             {
                 using (var jsonWriter = CreateJsonWriter())
                 {
-                    jsonWriter.WriteStartElement("root", "");
+                    jsonWriter.WriteStartElement("root", string.Empty);
                     jsonWriter.WriteAttributeString("type", "object");
                     jsonWriter.WriteElementString("v", message);
                     jsonWriter.WriteEndElement();
@@ -265,7 +307,7 @@
                 {
                     using (var jsonWriter = CreateJsonWriter())
                     {
-                        jsonWriter.WriteStartElement("root", "");
+                        jsonWriter.WriteStartElement("root", string.Empty);
                         jsonWriter.WriteAttributeString("type", "object");
                         jsonWriter.WriteElementString("$type", _inputReadRequestTypeName);
                         jsonWriter.WriteEndElement();
@@ -286,7 +328,7 @@
             {
                 using (var jsonWriter = CreateJsonWriter())
                 {
-                    jsonWriter.WriteStartElement("root", "");
+                    jsonWriter.WriteStartElement("root", string.Empty);
                     jsonWriter.WriteAttributeString("type", "object");
                     jsonWriter.WriteElementString("$type", _exceptionResultTypeName);
                     jsonWriter.WriteElementString("m", result.Message);
@@ -321,9 +363,32 @@
 
         private void WriteResultObject(XmlDictionaryWriter jsonWriter, ResultObject result, bool isRoot)
         {
-            jsonWriter.WriteStartElement(isRoot ? "root" : "item", "");
+            jsonWriter.WriteStartElement(isRoot ? "root" : "item", string.Empty);
             jsonWriter.WriteAttributeString("type", "object");
             WriteResultObjectContent(jsonWriter, result);
+            jsonWriter.WriteEndElement();
+        }
+
+        private void WriteDictionary(XmlWriter jsonWriter, IDictionary<string, object?> dic)
+        {
+            jsonWriter.WriteStartElement("item", string.Empty);
+            jsonWriter.WriteAttributeString("type", "object");
+
+            foreach (var o in dic)
+            {
+                if (o.Value == null)
+                {
+                    jsonWriter.WriteElementString(o.Key, "null");
+                }
+                else
+                {
+                    jsonWriter.WriteStartElement(o.Key);
+                    jsonWriter.WriteValue(o.Value);
+                    jsonWriter.WriteEndElement();
+                }
+              
+            }
+
             jsonWriter.WriteEndElement();
         }
 
@@ -392,7 +457,7 @@
                 }
             }
 
-            private bool EndsWithNewLine(char[] buffer, int index, int count)
+            private static bool EndsWithNewLine(char[] buffer, int index, int count)
             {
                 var nl = Environment.NewLine;
 

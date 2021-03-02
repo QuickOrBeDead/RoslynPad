@@ -48,6 +48,8 @@ namespace RoslynPad.UI
         private bool _restoreSuccessful;
         private double? _reportedProgress;
 
+        private IList<IList<IDictionary<string, object?>>?> _dumpXhtmlObjects;
+
         public string Id { get; }
         public string BuildPath { get; }
 
@@ -85,6 +87,7 @@ namespace RoslynPad.UI
             _platformsFactory = serviceProvider.GetService<IPlatformsFactory>();
             _serviceProvider = serviceProvider;
             _results = new ObservableCollection<IResultObject>();
+            _dumpXhtmlObjects = new ObservableCollection<IList<IDictionary<string, object?>>?>();
 
             MainViewModel = mainViewModel;
             CommandProvider = commands;
@@ -103,6 +106,7 @@ namespace RoslynPad.UI
             CommentSelectionCommand = commands.CreateAsync(() => CommentUncommentSelection(CommentAction.Comment));
             UncommentSelectionCommand = commands.CreateAsync(() => CommentUncommentSelection(CommentAction.Uncomment));
             RenameSymbolCommand = commands.CreateAsync(RenameSymbol);
+            ClearDumpCommand = commands.Create(ClearDump);
 
             var roslynHost = MainViewModel.RoslynHost;
 
@@ -115,6 +119,7 @@ namespace RoslynPad.UI
             _executionHost = new ExecutionHost(_executionHostParameters, roslynHost);
 
             _executionHost.Dumped += ExecutionHostOnDump;
+            _executionHost.DictionaryListDumped += ExecutionHostDictionaryListDumped;
             _executionHost.Error += ExecutionHostOnError;
             _executionHost.ReadInput += ExecutionHostOnInputRequest;
             _executionHost.CompilationErrors += ExecutionHostOnCompilationErrors;
@@ -126,6 +131,11 @@ namespace RoslynPad.UI
             InitializePlatforms();
         }
 
+        private void ClearDump()
+        {
+            DumpXhtmlObjects.Clear();
+        }
+
         private void InitializePlatforms()
         {
             AvailablePlatforms = _platformsFactory.GetExecutionPlatforms().ToImmutableArray();
@@ -135,6 +145,18 @@ namespace RoslynPad.UI
         private void OnRestoreStarted()
         {
             IsRestoring = true;
+        }
+
+        private void ExecutionHostDictionaryListDumped(DictionaryListResultObject dictionaryListResult)
+        {
+            _dispatcher.InvokeAsync(() =>
+            {
+                var items = dictionaryListResult.Items;
+                if (items != null)
+                {
+                    _dumpXhtmlObjects.Add(items);
+                }
+            }, AppDispatcherPriority.Low);
         }
 
         private void OnRestoreCompleted(RestoreResult restoreResult)
@@ -579,6 +601,8 @@ namespace RoslynPad.UI
 
         public IDelegateCommand RenameSymbolCommand { get; }
 
+        public IDelegateCommand ClearDumpCommand { get; }
+
         public bool IsRunning
         {
             get => _isRunning;
@@ -862,6 +886,18 @@ namespace RoslynPad.UI
         }
 
         public bool HasReportedProgress => ReportedProgress.HasValue;
+
+        public IList<IList<IDictionary<string, object?>>?> DumpXhtmlObjects
+        {
+            get => _dumpXhtmlObjects!;
+            set
+            {
+                if (!ReferenceEquals(_dumpXhtmlObjects, value))
+                {
+                    SetProperty(ref _dumpXhtmlObjects, value);
+                }
+            }
+        }
 
         public event EventHandler? EditorFocus;
 

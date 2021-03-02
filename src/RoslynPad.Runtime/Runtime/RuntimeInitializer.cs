@@ -49,6 +49,7 @@ namespace RoslynPad.Runtime
             }
 
             ObjectExtensions.Dumped += data => consoleDumper.Dump(data);
+            ObjectExtensions.DictionaryListDumped += data => consoleDumper.DumpDictionaryList(DictionaryListResultObject.Create(data!));
             AppDomain.CurrentDomain.ProcessExit += (o, e) => consoleDumper.Flush();            
         }
 

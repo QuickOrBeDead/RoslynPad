@@ -6,6 +6,7 @@
              xmlns:controls="clr-namespace:RoslynPad.Controls"
              xmlns:ui="clr-namespace:RoslynPad.UI;assembly=RoslynPad.Common.UI"
              xmlns:editor="clr-namespace:RoslynPad.Editor;assembly=RoslynPad.Editor"
+             xmlns:behaviors="clr-namespace:RoslynPad.Behaviors"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance ui:OpenDocumentViewModel}">
     <FrameworkElement.InputBindings>
@@ -235,8 +236,9 @@
 
             <TabControl Grid.Column="0"
                         Grid.Row="3"
-                        TabStripPlacement="Bottom">
-                <TabItem Header="Results">
+                        TabStripPlacement="Bottom"
+                        Name="BottomTabs">
+                <TabItem Header="Results" Name="ResultsTab">
                     <DockPanel Grid.IsSharedSizeScope="True">
                         <ScrollViewer DockPanel.Dock="Top"
                                       Name="HeaderScroll"
@@ -336,6 +338,17 @@
                             </ItemsControl.ItemContainerStyle>
                         </controls:TreeListView>
                     </DockPanel>
+                </TabItem>
+                <TabItem Header="Dump" Name="DumpTab">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Button Grid.Row="0" Content="Clear" Command="{Binding ClearDumpCommand }"></Button>
+                        <WebBrowser Grid.Row="1" behaviors:WebBrowserBehavior.DumpObjects="{Binding DumpXhtmlObjects}" />
+                    </Grid>
+                   
                 </TabItem>
             </TabControl>
         </Grid>

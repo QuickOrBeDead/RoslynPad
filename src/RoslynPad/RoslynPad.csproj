@@ -16,15 +16,22 @@
     <EmbeddedResource Include="**\*.xshd" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="Behaviors\StyleSheet.css" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\RoslynPad.Common.UI\RoslynPad.Common.UI.csproj" />
     <ProjectReference Include="..\RoslynPad.Editor\RoslynPad.Editor.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AvalonLibrary" Version="2.4.0" />
     <PackageReference Include="Dirkster.AvalonDock" Version="4.50.2" />
+    <PackageReference Include="HtmlTextWriter" Version="2.1.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0" />
     <PackageReference Include="Mono.Cecil" Version="0.11.3" />
     <PackageReference Include="System.Runtime.InteropServices.RuntimeInformation" Version="4.3.0" />
     <PackageReference Include="Microsoft.DiaSymReader.Native" Version="1.7.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Behaviors\StyleSheet.css" />
   </ItemGroup>
 </Project>

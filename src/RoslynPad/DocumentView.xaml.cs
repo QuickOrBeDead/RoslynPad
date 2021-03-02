@@ -54,6 +54,7 @@
             {
                 return;
             }
+
             if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
             {
                 _viewModel.MainViewModel.EditorFontSize += args.Delta > 0 ? 1 : -1;
@@ -122,6 +123,7 @@
             _viewModel.ResultsAvailable -= ResultsAvailable;
 
             _syncContext?.Post(o => ResultPaneRow.Height = new GridLength(1, GridUnitType.Star), null);
+            _syncContext?.Post(_ => BottomTabs.SelectedItem = ResultsTab, null);
         }
 
         private void OnError(ExceptionResultObject? e)
@@ -292,6 +294,7 @@
                 {
                     _viewModel.NuGet.IsPackagesMenuOpen = true;
                 }
+
                 RootNuGetMenu.Focus();
             }
             else if (e.Key == Key.Enter)

@@ -1,12 +1,19 @@
-﻿using System;
-using System.Collections;
-using System.Linq;
-using RoslynPad.Annotations;
-
-namespace RoslynPad.Runtime
+﻿namespace RoslynPad.Runtime
 {
+    using System;
+    using System.Collections;
+    using System.Linq;
+    using System.Collections.Generic;
+
+    using RoslynPad.Annotations;
+
     public static class ObjectExtensions
     {
+        public static void DumpDictionaryList(this IList<IDictionary<string, object>> o)
+        {
+            DictionaryListDumped?.Invoke(o);
+        }
+
         public static T Dump<T>(this T o, string? header = null, int maxDepth = DumpQuotas.DefaultMaxDepth, int maxExpandedDepth = DumpQuotas.DefaultMaxExpandedDepth, int maxEnumerableLength = DumpQuotas.DefaultMaxEnumerableLength, int maxStringLength = DumpQuotas.DefaultMaxStringLength)
         {
             Dumped?.Invoke(new DumpData(o, header, new DumpQuotas(maxDepth, maxExpandedDepth, maxEnumerableLength, maxStringLength)));
@@ -41,6 +48,7 @@ namespace RoslynPad.Runtime
         }
 
         internal static event Action<DumpData>? Dumped;
+        internal static event Action<IList<IDictionary<string, object>>>? DictionaryListDumped;
     }
 
     internal readonly struct DumpData
