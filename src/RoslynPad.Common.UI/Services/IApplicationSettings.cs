@@ -1,12 +1,15 @@
-using System;
-using System.ComponentModel;
-using System.Composition;
-using System.IO;
-using System.Runtime.InteropServices;
-using Newtonsoft.Json;
-
 namespace RoslynPad.UI
 {
+    using System;
+    using System.ComponentModel;
+    using System.Composition;
+    using System.IO;
+    using System.Runtime.InteropServices;
+
+    using Newtonsoft.Json;
+
+    using Microsoft.Extensions.Configuration;
+
     public interface IApplicationSettings : INotifyPropertyChanged
     {
         void LoadDefault();
@@ -22,7 +25,6 @@ namespace RoslynPad.UI
         bool SearchFileContents { get; set; }
         bool SearchUsingRegex { get; set; }
         bool OptimizeCompilation { get; set; }
-        int LiveModeDelayMs { get; set; }
         bool SearchWhileTyping { get; set; }
         string DefaultPlatformName { get; set; }
         string EffectiveDocumentPath { get; }
@@ -33,14 +35,11 @@ namespace RoslynPad.UI
     [Export(typeof(IApplicationSettings)), Shared]
     internal class ApplicationSettings : NotificationObject, IApplicationSettings
     {
-        private const int LiveModeDelayMsDefault = 2000;
         private const int EditorFontSizeDefault = 12;
         private const string DefaultConfigFileName = "RoslynPad.json";
 
         private string? _path;
 
-        private bool _sendErrors;
-        private string? _latestVersion;
         private string? _windowBounds;
         private string? _dockLayout;
         private string? _windowState;
@@ -50,17 +49,21 @@ namespace RoslynPad.UI
         private bool _searchFileContents;
         private bool _searchUsingRegex;
         private bool _optimizeCompilation;
-        private int _liveModeDelayMs = LiveModeDelayMsDefault;
         private bool _searchWhileTyping;
         private bool _enableBraceCompletion = true;
         private string _defaultPlatformName;
         private double? _windowFontSize;
         private bool _formatDocumentOnComment = true;
 
+        private readonly IConfigurationRoot _configuration;
+
         [ImportingConstructor]
         public ApplicationSettings()
         {
             _defaultPlatformName = string.Empty;
+
+            _configuration = new ConfigurationBuilder().AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.json"), optional: true)
+                .Build();
         }
 
         public void LoadDefault()
@@ -77,22 +80,10 @@ namespace RoslynPad.UI
             _path = path;
         }
 
-        public bool SendErrors
-        {
-            get => _sendErrors;
-            set => SetProperty(ref _sendErrors, value);
-        }
-
         public bool EnableBraceCompletion
         {
             get => _enableBraceCompletion;
             set => SetProperty(ref _enableBraceCompletion, value);
-        }
-
-        public string? LatestVersion
-        {
-            get => _latestVersion;
-            set => SetProperty(ref _latestVersion, value);
         }
 
         public string? WindowBounds
@@ -143,12 +134,6 @@ namespace RoslynPad.UI
             set => SetProperty(ref _optimizeCompilation, value);
         }
 
-        public int LiveModeDelayMs
-        {
-            get => _liveModeDelayMs;
-            set => SetProperty(ref _liveModeDelayMs, value);
-        }
-
         public bool SearchWhileTyping
         {
             get => _searchWhileTyping;
@@ -192,16 +177,13 @@ namespace RoslynPad.UI
 
         public string GetDefaultDocumentPath()
         {
-            string? documentsPath;
+            string? documentsPath = _configuration["DefaultDocumentPath"];
+            if (!string.IsNullOrWhiteSpace(documentsPath))
+            {
+                return documentsPath;
+            }
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            }
-            else // Unix or Mac
-            {
-                documentsPath = Environment.GetEnvironmentVariable("HOME");
-            }
+            documentsPath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) : Environment.GetEnvironmentVariable("HOME");
 
             if (string.IsNullOrEmpty(documentsPath))
             {
@@ -240,10 +222,8 @@ namespace RoslynPad.UI
 
         private void LoadDefaultSettings()
         {
-            SendErrors = true;
             FormatDocumentOnComment = true;
             EditorFontSize = EditorFontSizeDefault;
-            LiveModeDelayMs = LiveModeDelayMsDefault;
         }
 
         private void SaveSettings()

@@ -1,23 +1,22 @@
-﻿using System;
-using System.Composition;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Threading;
-using RoslynPad.UI;
-
-namespace RoslynPad
+﻿namespace RoslynPad
 {
+    using System;
+    using System.Composition;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using System.Windows.Threading;
+
+    using RoslynPad.UI;
+
     [Export(typeof(IAppDispatcher))]
     public class AppDispatcher : DispatcherObject, IAppDispatcher
     {
-        public void InvokeAsync(Action action, AppDispatcherPriority priority = AppDispatcherPriority.Normal,
-            CancellationToken cancellationToken = new CancellationToken())
+        public void InvokeAsync(Action action, AppDispatcherPriority priority = AppDispatcherPriority.Normal, CancellationToken cancellationToken = new CancellationToken())
         {
             InternalInvoke(action, priority, cancellationToken);
         }
 
-        public Task InvokeTaskAsync(Action action, AppDispatcherPriority priority = AppDispatcherPriority.Normal,
-            CancellationToken cancellationToken = new CancellationToken())
+        public Task InvokeTaskAsync(Action action, AppDispatcherPriority priority = AppDispatcherPriority.Normal, CancellationToken cancellationToken = new CancellationToken())
         {
             return InternalInvoke(action, priority, cancellationToken).Task;
         }
@@ -27,7 +26,7 @@ namespace RoslynPad
             return Dispatcher.InvokeAsync(action, ConvertPriority(priority), cancellationToken);
         }
 
-        private DispatcherPriority ConvertPriority(AppDispatcherPriority priority)
+        private static DispatcherPriority ConvertPriority(AppDispatcherPriority priority)
         {
             switch (priority)
             {

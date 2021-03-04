@@ -11,7 +11,7 @@ using RoslynPad.Utilities;
 
 namespace RoslynPad.Runtime
 {
-    internal interface IResultObject
+    public interface IResultObject
     {
         string? Value { get; }
 
@@ -580,6 +580,14 @@ namespace RoslynPad.Runtime
         public int Column { get; private set; }
         [DataMember(Name = "m")]
         public string Message { get; private set; }
+
+        public string LineInfo
+        {
+            get
+            {
+                return $"{Line}, {Column}";
+            }
+        }
 
         public static CompilationErrorResultObject Create(
             string severity, 

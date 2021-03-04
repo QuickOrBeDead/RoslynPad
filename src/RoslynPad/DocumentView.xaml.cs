@@ -71,6 +71,19 @@
 
             _viewModel.EditorFocus += (o, e) => Editor.Focus();
             _viewModel.DocumentUpdated += (o, e) => Dispatcher.InvokeAsync(() => Editor.RefreshHighlighting());
+            _viewModel.ExecutionHostOutputLineReceived += s =>
+            {
+                ShowResultPaneRow();
+
+                _syncContext?.Post(
+                    _ =>
+                    {
+                        BottomTabs.SelectedItem = OutputTab;
+                        OutputText.AppendText($"{DateTime.Now:dd/MM/yyyy HH:mm:ss.fff} - {s}{Environment.NewLine}");
+                    },
+                    null);
+            };
+            _viewModel.RunStarted += () => OutputText.Clear();
 
             _viewModel.MainViewModel.EditorFontSizeChanged += OnEditorFontSizeChanged;
             Editor.FontSize = _viewModel.MainViewModel.EditorFontSize;
@@ -118,12 +131,29 @@
             _viewModel.SendInput(textBox.Text);
         }
 
-        private void ResultsAvailable()
+        private void ResultsAvailable(IResultObject o)
         {
-            _viewModel.ResultsAvailable -= ResultsAvailable;
+            ShowResultPaneRow();
+            _syncContext?.Post(
+                _ =>
+                {
+                    switch (o)
+                    {
+                        case CompilationErrorResultObject _:
+                        case ExceptionResultObject _:
+                            BottomTabs.SelectedItem = ErrorsTab;
+                            break;
+                        case DictionaryListResultObject _:
+                            BottomTabs.SelectedItem = DumpTab;
+                            break;
+                    }
+                },
+                null);
+        }
 
-            _syncContext?.Post(o => ResultPaneRow.Height = new GridLength(1, GridUnitType.Star), null);
-            _syncContext?.Post(_ => BottomTabs.SelectedItem = ResultsTab, null);
+        private void ShowResultPaneRow()
+        {
+            _syncContext?.Post(_ => ResultPaneRow.Height = new GridLength(1, GridUnitType.Star), null);
         }
 
         private void OnError(ExceptionResultObject? e)
@@ -210,7 +240,10 @@
         private void TryJumpToLine(object source)
         {
             var result = (source as FrameworkElement)?.DataContext as CompilationErrorResultObject;
-            if (result == null) return;
+            if (result == null)
+            {
+                return;
+            }
 
             Editor.TextArea.Caret.Line = result.Line;
             Editor.TextArea.Caret.Column = result.Column;

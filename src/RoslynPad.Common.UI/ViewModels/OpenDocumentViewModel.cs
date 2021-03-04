@@ -44,7 +44,7 @@ namespace RoslynPad.UI
         private DocumentViewModel? _document;
         private bool _isRestoring;
         private IReadOnlyList<ExecutionPlatform>? _availablePlatforms;
-        private DocumentId? _documentId;
+
         private bool _restoreSuccessful;
         private double? _reportedProgress;
 
@@ -53,9 +53,9 @@ namespace RoslynPad.UI
         public string Id { get; }
         public string BuildPath { get; }
 
-        public string WorkingDirectory => Document != null
-            ? Path.GetDirectoryName(Document.Path)!
-            : MainViewModel.DocumentRoot.Path;
+        public string WorkingDirectory => (Document != null
+                                               ? Path.GetDirectoryName(Document.Path)
+                                               : MainViewModel.DocumentRoot.Path)!;
 
         public IEnumerable<object> Results => _results;
         internal IEnumerable<IResultObject> ResultsInternal => _results;
@@ -126,6 +126,11 @@ namespace RoslynPad.UI
             _executionHost.RestoreStarted += OnRestoreStarted;
             _executionHost.RestoreCompleted += OnRestoreCompleted;
             _executionHost.RestoreMessage += AddResult;
+            _executionHost.RestoreStdOutLine += s =>
+                _dispatcher.InvokeAsync(() =>
+                {
+                    ExecutionHostOutputLineReceived?.Invoke(s);
+                }, AppDispatcherPriority.Low);
             _executionHost.ProgressChanged += p => ReportedProgress = p.Progress;
 
             InitializePlatforms();
@@ -155,6 +160,8 @@ namespace RoslynPad.UI
                 if (items != null)
                 {
                     _dumpXhtmlObjects.Add(items);
+
+                    ResultsAvailable?.Invoke(dictionaryListResult);
                 }
             }, AppDispatcherPriority.Low);
         }
@@ -168,7 +175,7 @@ namespace RoslynPad.UI
             if (restoreResult.Success)
             {
                 var host = MainViewModel.RoslynHost;
-                var document = host.GetDocument(DocumentId);
+                var document = host.GetDocument(DocumentId!);
                 if (document == null)
                 {
                     return;
@@ -180,7 +187,7 @@ namespace RoslynPad.UI
                     .WithMetadataReferences(_executionHost.MetadataReferences)
                     .WithAnalyzerReferences(_executionHost.Analyzers);
 
-                document = project.GetDocument(DocumentId);
+                document = project.GetDocument(DocumentId!);
 
                 host.UpdateDocument(document!);
                 OnDocumentUpdated();
@@ -223,7 +230,11 @@ namespace RoslynPad.UI
 
         public event Action? ReadInput;
 
-        public event Action? ResultsAvailable;
+        public event Action<IResultObject>? ResultsAvailable;
+
+        public event Action<string>? ExecutionHostOutputLineReceived;
+
+        public event Action? RunStarted;
 
         private void AddResult(object o)
         {
@@ -235,7 +246,7 @@ namespace RoslynPad.UI
             _dispatcher.InvokeAsync(() =>
             {
                 _results.Add(o);
-                ResultsAvailable?.Invoke();
+                ResultsAvailable?.Invoke(o);
             }, AppDispatcherPriority.Low);
         }
 
@@ -261,7 +272,7 @@ namespace RoslynPad.UI
                 {
                     _results.Add(errorResult);
 
-                    ResultsAvailable?.Invoke();
+                    ResultsAvailable?.Invoke(errorResult);
                 }
             }, AppDispatcherPriority.Low);
         }
@@ -275,7 +286,7 @@ namespace RoslynPad.UI
                     _results.Add(error);
                 }
 
-                ResultsAvailable?.Invoke();
+                ResultsAvailable?.Invoke(errors.Count > 0 ? errors[0] : null!);
             });
         }
 
@@ -293,7 +304,7 @@ namespace RoslynPad.UI
             _ = _executionHost?.SendInputAsync(input);
         }
 
-        private IEnumerable<string> GetReferencePaths(IEnumerable<MetadataReference> references)
+        private static IEnumerable<string> GetReferencePaths(IEnumerable<MetadataReference> references)
         {
             return references.OfType<PortableExecutableReference>().Select(x => x.FilePath).Where(x => x != null)!;
         }
@@ -301,7 +312,7 @@ namespace RoslynPad.UI
         private async Task RenameSymbol()
         {
             var host = MainViewModel.RoslynHost;
-            var document = host.GetDocument(DocumentId);
+            var document = host.GetDocument(DocumentId!);
             if (document == null || _getSelection == null)
             {
                 return;
@@ -317,7 +328,7 @@ namespace RoslynPad.UI
             {
                 var newSolution = await Renamer.RenameSymbolAsync(document.Project.Solution, symbol, dialog.SymbolName ?? string.Empty,
                     document.Project.Solution.Options).ConfigureAwait(true);
-                var newDocument = newSolution.GetDocument(DocumentId);
+                var newDocument = newSolution.GetDocument(DocumentId!);
                 // TODO: possibly update entire solution
                 host.UpdateDocument(newDocument!);
             }
@@ -334,7 +345,7 @@ namespace RoslynPad.UI
         {
             const string singleLineCommentString = "//";
 
-            var document = MainViewModel.RoslynHost.GetDocument(DocumentId);
+            var document = MainViewModel.RoslynHost.GetDocument(DocumentId!);
             if (document == null)
             {
                 return;
@@ -387,7 +398,7 @@ namespace RoslynPad.UI
 
         private async Task FormatDocument()
         {
-            var document = MainViewModel.RoslynHost.GetDocument(DocumentId);
+            var document = MainViewModel.RoslynHost.GetDocument(DocumentId!);
             var formattedDocument = await Formatter.FormatAsync(document!).ConfigureAwait(false);
             MainViewModel.RoslynHost.UpdateDocument(formattedDocument);
         }
@@ -536,7 +547,7 @@ namespace RoslynPad.UI
         {
             if (!_isInitialized) return;
 
-            var document = MainViewModel.RoslynHost.GetDocument(DocumentId);
+            var document = MainViewModel.RoslynHost.GetDocument(DocumentId!);
             if (document == null)
             {
                 return;
@@ -572,11 +583,7 @@ namespace RoslynPad.UI
             RestartHostCommand?.Execute();
         }
 
-        public DocumentId DocumentId
-        {
-            get => _documentId ?? throw new ArgumentNullException(nameof(_documentId));
-            private set => _documentId = value;
-        }
+        public DocumentId? DocumentId { get; private set; }
 
         public MainViewModelBase MainViewModel { get; }
         public ICommandProvider CommandProvider { get; }
@@ -584,6 +591,8 @@ namespace RoslynPad.UI
         public NuGetDocumentViewModel NuGet { get; }
 
         public string Title => Document != null && !Document.IsAutoSaveOnly ? Document.Name : "New";
+
+        public string Uri => Document != null ? Document.Path : "file://";
 
         public IDelegateCommand OpenBuildPathCommand { get; }
 
@@ -622,6 +631,7 @@ namespace RoslynPad.UI
             ReportedProgress = null;
 
             Reset();
+            RunStarted?.Invoke();
 
             await MainViewModel.AutoSaveOpenDocuments().ConfigureAwait(true);
 
@@ -689,7 +699,7 @@ namespace RoslynPad.UI
 
             async Task UpdatePackagesAsync(CancellationToken cancellationToken)
             {
-                var document = MainViewModel.RoslynHost.GetDocument(DocumentId);
+                var document = MainViewModel.RoslynHost.GetDocument(DocumentId!);
                 if (document == null)
                 {
                     return;
@@ -830,7 +840,7 @@ namespace RoslynPad.UI
 
         private async Task<string> GetCode(CancellationToken cancellationToken)
         {
-            var document = MainViewModel.RoslynHost.GetDocument(DocumentId);
+            var document = MainViewModel.RoslynHost.GetDocument(DocumentId!);
             if (document == null)
             {
                 return string.Empty;

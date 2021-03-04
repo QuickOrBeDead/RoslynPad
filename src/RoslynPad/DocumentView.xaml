@@ -7,6 +7,7 @@
              xmlns:ui="clr-namespace:RoslynPad.UI;assembly=RoslynPad.Common.UI"
              xmlns:editor="clr-namespace:RoslynPad.Editor;assembly=RoslynPad.Editor"
              xmlns:behaviors="clr-namespace:RoslynPad.Behaviors"
+             xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance ui:OpenDocumentViewModel}">
     <FrameworkElement.InputBindings>
@@ -238,7 +239,16 @@
                         Grid.Row="3"
                         TabStripPlacement="Bottom"
                         Name="BottomTabs">
-                <TabItem Header="Results" Name="ResultsTab">
+                <TabItem Header="Console" Name="ConsoleTab"></TabItem>
+                <TabItem Header="Output" Name="OutputTab">
+                    <avalonedit:TextEditor
+                        Name="OutputText"
+                        FontFamily="Consolas"
+                        FontSize="10pt"
+                        IsReadOnly="True"
+                        ShowLineNumbers="True"/>
+                </TabItem>
+                <TabItem Header="Errors" Name="ErrorsTab">
                     <DockPanel Grid.IsSharedSizeScope="True">
                         <ScrollViewer DockPanel.Dock="Top"
                                       Name="HeaderScroll"
@@ -252,8 +262,11 @@
                                     <ColumnDefinition Width="450"
                                                       SharedSizeGroup="ResultValueGroup" />
                                     <ColumnDefinition Width="1" />
+                                    <ColumnDefinition Width="70"
+                                                      SharedSizeGroup="ResultLineGroup" />
+                                    <ColumnDefinition Width="1" />
                                     <ColumnDefinition Width="Auto"
-                                                      SharedSizeGroup="ResultTypeGroup" />
+                                                      SharedSizeGroup="ResultFileGroup" />
                                     <ColumnDefinition Width="1" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
@@ -267,7 +280,7 @@
                                               HorizontalAlignment="Stretch"
                                               VerticalAlignment="Stretch"
                                               Background="DarkGray" />
-                                <TextBlock Text="Value"
+                                <TextBlock Text="Description"
                                            Margin="20 0 20 0"
                                            HorizontalAlignment="Center"
                                            Grid.Column="2" />
@@ -277,16 +290,30 @@
                                               HorizontalAlignment="Stretch"
                                               VerticalAlignment="Stretch"
                                               Background="DarkGray" />
-                                <TextBlock Text="Type"
+                                <TextBlock Text="Line"
                                            Margin="20 0 20 0"
                                            HorizontalAlignment="Center"
                                            Grid.Column="4" />
                                 <GridSplitter Grid.Column="5"
+                                              ResizeBehavior="PreviousAndNext"
+                                              ResizeDirection="Columns"
+                                              HorizontalAlignment="Stretch"
+                                              VerticalAlignment="Stretch"
+                                              Background="DarkGray" />
+                                <TextBlock Text="File"
+                                           Margin="20 0 20 0"
+                                           HorizontalAlignment="Center"
+                                           Grid.Column="6" />
+                                <GridSplitter Grid.Column="7"
                                               ResizeBehavior="PreviousAndCurrent"
                                               ResizeDirection="Columns"
                                               HorizontalAlignment="Stretch"
                                               VerticalAlignment="Stretch"
                                               Background="DarkGray" />
+                                <TextBlock Text=""
+                                           Margin="20 0 20 0"
+                                           HorizontalAlignment="Center"
+                                           Grid.Column="8" />
                             </Grid>
                         </ScrollViewer>
                         <controls:TreeListView x:Name="ResultTree"
@@ -348,7 +375,6 @@
                         <Button Grid.Row="0" Content="Clear" Command="{Binding ClearDumpCommand }"></Button>
                         <WebBrowser Grid.Row="1" behaviors:WebBrowserBehavior.DumpObjects="{Binding DumpXhtmlObjects}" />
                     </Grid>
-                   
                 </TabItem>
             </TabControl>
         </Grid>

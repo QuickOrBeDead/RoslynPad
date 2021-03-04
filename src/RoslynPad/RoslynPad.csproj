@@ -34,4 +34,9 @@
   <ItemGroup>
     <EmbeddedResource Include="Behaviors\StyleSheet.css" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

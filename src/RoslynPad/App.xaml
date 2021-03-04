@@ -350,7 +350,9 @@
                         <ColumnDefinition Width="1" />
                         <ColumnDefinition SharedSizeGroup="ResultValueGroup" />
                         <ColumnDefinition Width="1" />
-                        <ColumnDefinition SharedSizeGroup="ResultTypeGroup" />
+                        <ColumnDefinition SharedSizeGroup="ResultLineGroup" />
+                        <ColumnDefinition Width="1" />
+                        <ColumnDefinition SharedSizeGroup="ResultFileGroup" />
                     </Grid.ColumnDefinitions>
                     <DockPanel Grid.Column="0">
                         <Button Command="Copy"
@@ -378,15 +380,21 @@
                                Text="{Binding Message, Mode=OneTime}"
                                TextWrapping="Wrap" />
                     <TextBlock Grid.Column="4"
-                               VerticalAlignment="Top"
-                               TextWrapping="Wrap">
-                        <Run Text="{Binding Line, Mode=OneTime}" />,
-                        <Run Text="{Binding Column, Mode=OneTime}" />
-                    </TextBlock>
+                               TextWrapping="Wrap"
+                               Text="{Binding LineInfo, Mode=OneTime}" />
+                    <TextBlock Grid.Column="6"
+                               TextWrapping="Wrap"
+                               Text="{Binding File, Mode=OneTime}" />
                 </Grid>
                 <DataTemplate.Triggers>
                     <DataTrigger Binding="{Binding Severity}"
                                  Value="Warning">
+                        <Setter TargetName="Icon"
+                                Property="Source"
+                                Value="{StaticResource WarningMarker}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Severity}"
+                                 Value="Hidden">
                         <Setter TargetName="Icon"
                                 Property="Source"
                                 Value="{StaticResource WarningMarker}" />

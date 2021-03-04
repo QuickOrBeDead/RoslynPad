@@ -31,7 +31,7 @@ namespace RoslynPad.Build
                 catch { }
             });
 
-            await Task.Run(() => process.Start()).ConfigureAwait(false);
+            await Task.Run(() => process.Start(), cancellationToken).ConfigureAwait(false);
 
             return new ProcessResult(process);
         }

@@ -117,6 +117,7 @@ namespace RoslynPad.Build
         public event Action? RestoreStarted;
         public event Action<RestoreResult>? RestoreCompleted;
         public event Action<RestoreResultObject>? RestoreMessage;
+        public event Action<string>? RestoreStdOutLine;
         public event Action<ProgressResultObject>? ProgressChanged;
 
         public void Dispose()
@@ -224,15 +225,15 @@ namespace RoslynPad.Build
         private async Task RunProcess(string assemblyPath, CancellationToken cancellationToken)
         {
             using (var process = new Process
-            {
-                StartInfo = GetProcessStartInfo(assemblyPath)
-            })
-            using (cancellationToken.Register(() =>
+                                      {
+                                          StartInfo = GetProcessStartInfo(assemblyPath)
+                                      })
+            await using (cancellationToken.Register(() =>
             {
                 try
                 {
                     _processInputStream = null;
-                    process.Kill();
+                    process?.Kill();
                 }
                 catch { }
             }))
@@ -242,8 +243,8 @@ namespace RoslynPad.Build
                     _processInputStream = new StreamWriter(process.StandardInput.BaseStream, Encoding.UTF8);
 
                     await Task.WhenAll(
-                        Task.Run(() => ReadObjectProcessStream(process.StandardOutput)),
-                        Task.Run(() => ReadProcessStream(process.StandardError)));
+                        Task.Run(() => ReadObjectProcessStream(process.StandardOutput), cancellationToken),
+                        Task.Run(() => ReadProcessStream(process.StandardError), cancellationToken));
                 }
             }
 
@@ -455,9 +456,12 @@ namespace RoslynPad.Build
 
                     using var result = await ProcessUtil.RunProcess(DotNetExecutable, BuildPath, $"build -nologo -p:nugetinteractive=true -flp:errorsonly;logfile=\"{errorsPath}\" \"{csprojPath}\"", cancellationToken).ConfigureAwait(false);
 
-                    await foreach (var line in result.GetStandardOutputLines())
+                    await foreach (var line in result.GetStandardOutputLines().WithCancellation(cancellationToken))
                     {
                         var trimmed = line.Trim();
+
+                        RestoreStdOutLine?.Invoke(trimmed);
+
                         var deviceCode = GetDeviceCode(trimmed);
                         if (deviceCode != null)
                         {

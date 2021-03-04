@@ -23,6 +23,8 @@
     public partial class MainWindow
     {
         private readonly MainViewModelBase _viewModel;
+        private readonly IAppDispatcher _dispatcher;
+
         private bool _isClosing;
         private bool _isClosed;
 
@@ -36,13 +38,11 @@
             var locator = container.CreateContainer().GetExport<IServiceProvider>();
 
             _viewModel = locator.GetService<MainViewModelBase>();
+            _dispatcher = locator.GetService<IAppDispatcher>();
 
             DataContext = _viewModel;
             InitializeComponent();
             DocumentsPane.ToggleAutoHide();
-
-            LoadWindowLayout();
-            LoadDockLayout();
         }
 
         private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -50,6 +50,11 @@
             Loaded -= OnLoaded;
 
             await _viewModel.Initialize().ConfigureAwait(false);
+            await _dispatcher.InvokeTaskAsync(LoadDockLayout).ConfigureAwait(false);
+
+            _viewModel.DocumentsLoaded = true;
+
+            await _dispatcher.InvokeTaskAsync(LoadWindowLayout).ConfigureAwait(false);
         }
 
         protected override async void OnClosing(CancelEventArgs e)
@@ -128,13 +133,34 @@
         private void LoadDockLayout()
         {
             var layout = _viewModel.Settings.DockLayout;
-            if (string.IsNullOrEmpty(layout)) return;
+            if (string.IsNullOrEmpty(layout))
+            {
+                return;
+            }
 
-            var serializer = new XmlLayoutSerializer(DockingManager);
+            var layoutSerializer = new XmlLayoutSerializer(DockingManager);
+            layoutSerializer.LayoutSerializationCallback += (s, e) =>
+            {
+                var contentId = e.Model.ContentId;
+
+                if (string.IsNullOrEmpty(contentId) || e.Content != null)
+                {
+                    return;
+                }
+
+                if (File.Exists(contentId))
+                {
+                    var document = DocumentViewModel.FromPath(contentId);
+                    _viewModel.OpenDocument(document);
+                }
+
+                e.Cancel = true;
+            };
+
             var reader = new StringReader(layout);
             try
             {
-                serializer.Deserialize(reader);
+                layoutSerializer.Deserialize(reader);
             }
             catch
             {
@@ -171,7 +197,10 @@
 
         private void ViewErrorDetails_OnClick(object sender, RoutedEventArgs e)
         {
-            if (_viewModel.LastError == null) return;
+            if (_viewModel.LastError == null)
+            {
+                return;
+            }
 
             TaskDialog.ShowInline(
                 this,

@@ -104,7 +104,10 @@ namespace RoslynPad.UI
 
         public DocumentViewModel CreateNew(string documentName)
         {
-            if (!IsFolder) throw new InvalidOperationException("Parent must be a folder");
+            if (!IsFolder)
+            {
+                throw new InvalidOperationException("Parent must be a folder");
+            }
 
             var document = new DocumentViewModel(GetDocumentPathFromName(Path, documentName), false);
             AddChild(document);

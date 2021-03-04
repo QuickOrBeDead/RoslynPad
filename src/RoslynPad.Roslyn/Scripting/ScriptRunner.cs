@@ -337,7 +337,7 @@ namespace RoslynPad.Roslyn.Scripting
             }
 
             return diagnostics.AsEnumerable().Where(d =>
-                d.Severity == DiagnosticSeverity.Error || (includeWarnings && d.Severity == DiagnosticSeverity.Warning)).AsImmutable();
+                d.Severity == DiagnosticSeverity.Error || (includeWarnings && (d.Severity == DiagnosticSeverity.Warning || d.Severity == DiagnosticSeverity.Hidden))).AsImmutable();
         }
 
         private class DiagnosticBag

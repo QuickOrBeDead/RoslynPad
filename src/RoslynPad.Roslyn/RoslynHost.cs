@@ -60,7 +60,7 @@ namespace RoslynPad.Roslyn
             RoslynHostReferences? references = null,
             ImmutableArray<string>? disabledDiagnostics = null)
         {
-            if (references == null) references = RoslynHostReferences.Empty;
+            references ??= RoslynHostReferences.Empty;
 
             _workspaces = new ConcurrentDictionary<DocumentId, RoslynWorkspace>();
             _diagnosticsUpdatedNotifiers = new ConcurrentDictionary<DocumentId, Action<DiagnosticsUpdatedArgs>>();
@@ -117,7 +117,10 @@ namespace RoslynPad.Roslyn
         private void OnDiagnosticsUpdated(object? sender, DiagnosticsUpdatedArgs diagnosticsUpdatedArgs)
         {
             var documentId = diagnosticsUpdatedArgs.DocumentId;
-            if (documentId == null) return;
+            if (documentId == null)
+            {
+                return;
+            }
 
             if (_diagnosticsUpdatedNotifiers.TryGetValue(documentId, out var notifier))
             {

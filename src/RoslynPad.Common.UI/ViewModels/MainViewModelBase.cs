@@ -20,17 +20,18 @@ namespace RoslynPad.UI
         private readonly ICommandProvider _commands;
         private readonly DocumentFileWatcher _documentFileWatcher;
         private static readonly Version _currentVersion = new Version(16, 0);
-        private static readonly string _currentVersionVariant = "";
-
-        public const string NuGetPathVariableName = "$NuGet";
+        private static readonly string _currentVersionVariant = string.Empty;
 
         private OpenDocumentViewModel? _currentOpenDocument;
         private double _editorFontSize;
         private string? _searchText;
         private bool _isWithinSearchResults;
         private bool _isInitialized;
+        private bool _documentsLoaded;
         private DocumentViewModel _documentRoot;
         private DocumentWatcher _documentWatcher;
+
+        private Exception? _lastError;
 
         public IApplicationSettings Settings { get; }
         public DocumentViewModel DocumentRoot
@@ -48,6 +49,15 @@ namespace RoslynPad.UI
             private set
             {
                 SetProperty(ref _isInitialized, value);
+            }
+        }
+
+        public bool DocumentsLoaded
+        {
+            get => _documentsLoaded; 
+            set
+            {
+                SetProperty(ref _documentsLoaded, value);
                 OnPropertyChanged(nameof(HasNoOpenDocuments));
             }
         }
@@ -70,7 +80,7 @@ namespace RoslynPad.UI
             OpenFileCommand = commands.CreateAsync(OpenFile);
             CloseCurrentDocumentCommand = commands.CreateAsync(CloseCurrentDocument);
             CloseDocumentCommand = commands.CreateAsync<OpenDocumentViewModel>(CloseDocument);
-            ClearErrorCommand = commands.Create(() => {});
+            ClearErrorCommand = commands.Create(() => UpdateLastError(null));
             EditUserDocumentPathCommand = commands.Create(EditUserDocumentPath);
             ToggleOptimizationCommand = commands.Create(() => settings.OptimizeCompilation = !settings.OptimizeCompilation);
 
@@ -82,9 +92,21 @@ namespace RoslynPad.UI
             OpenDocuments.CollectionChanged += (sender, args) => OnPropertyChanged(nameof(HasNoOpenDocuments));
         }
 
+        private void UpdateLastError(Exception? lastError)
+        {
+            // TODO: https://github.com/aelij/RoslynPad/search?q=ReportError
+            _lastError = lastError;
+
+            OnPropertyChanged(nameof(LastError));
+            OnPropertyChanged(nameof(HasError));
+        }
+
         public async Task Initialize()
         {
-            if (IsInitialized) return;
+            if (IsInitialized)
+            {
+                return;
+            }
 
             try
             {
@@ -92,9 +114,9 @@ namespace RoslynPad.UI
 
                 IsInitialized = true;
             }
-            catch
+            catch (Exception e)
             {
-                // Empty
+                UpdateLastError(e);
             }
         }
 
@@ -139,11 +161,7 @@ namespace RoslynPad.UI
 
             OpenDocuments.AddRange(documents);
 
-            if (OpenDocuments.Count == 0)
-            {
-                CreateNewDocument();
-            }
-            else
+            if (OpenDocuments.Count != 0)
             {
                 CurrentOpenDocument = OpenDocuments[0];
             }
@@ -239,7 +257,10 @@ namespace RoslynPad.UI
 
         public void OpenDocument(DocumentViewModel document)
         {
-            if (document.IsFolder) return;
+            if (document.IsFolder)
+            {
+                return;
+            }
 
             var openDocument = OpenDocuments.FirstOrDefault(x => x.Document?.Path != null && string.Equals(x.Document.Path, document.Path, StringComparison.Ordinal));
             if (openDocument == null)
@@ -253,7 +274,10 @@ namespace RoslynPad.UI
 
         public async Task OpenFile()
         {
-            if (!IsInitialized) return;
+            if (!IsInitialized)
+            {
+                return;
+            }
 
             var dialog = _serviceProvider.GetService<IOpenFileDialog>();
             dialog.Filter = new FileDialogFilter("C# Scripts", "csx");
@@ -280,7 +304,7 @@ namespace RoslynPad.UI
 
         public void CreateNewDocument()
         {
-            var openDocument = GetOpenDocumentViewModel(null);
+            var openDocument = GetOpenDocumentViewModel();
             OpenDocuments.Add(openDocument);
             CurrentOpenDocument = openDocument;
         }
@@ -345,7 +369,7 @@ namespace RoslynPad.UI
         {
             get
             {
-                Exception? exception = null;
+                Exception? exception = _lastError;
                 var aggregateException = exception as AggregateException;
                 return aggregateException?.Flatten() ?? exception;
             }
@@ -355,7 +379,7 @@ namespace RoslynPad.UI
 
         public IDelegateCommand ClearErrorCommand { get; }
 
-        public bool HasNoOpenDocuments => IsInitialized && OpenDocuments.Count == 0;
+        public bool HasNoOpenDocuments => DocumentsLoaded && OpenDocuments.Count == 0;
 
         public double MinimumEditorFontSize => 8;
         public double MaximumEditorFontSize => 72;
