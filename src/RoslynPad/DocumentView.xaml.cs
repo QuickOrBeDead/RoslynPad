@@ -35,6 +35,7 @@
             Editor.TextArea.LeftMargins.Insert(0, _errorMargin);
             Editor.PreviewMouseWheel += EditorOnPreviewMouseWheel;
             Editor.TextArea.Caret.PositionChanged += CaretOnPositionChanged;
+            OutputText.Document.UndoStack.SizeLimit = 0;
 
             DataContextChanged += OnDataContextChanged;
         }
@@ -74,6 +75,7 @@
 
                 BottomTabs.SelectedItem = OutputTab;
                 OutputText.AppendText($"{DateTime.Now:dd/MM/yyyy HH:mm:ss.fff} - {s}{Environment.NewLine}");
+                OutputText.ScrollToEnd();
             };
             _viewModel.RunStarted += () => OutputText.Clear();
 
