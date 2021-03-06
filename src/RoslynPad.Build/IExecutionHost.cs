@@ -27,6 +27,7 @@ namespace RoslynPad.Build
         event Action<RestoreResultObject>? RestoreMessage;
         event Action<ProgressResultObject>? ProgressChanged;
         event Action<string>? RestoreStdOutLine;
+        event Action<string>? BuildMessage;
 
         void UpdateLibraries(IList<LibraryRef> libraries);
 

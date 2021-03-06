@@ -125,7 +125,7 @@ namespace RoslynPad.Roslyn.LanguageServices.ChangeSignature
                 _originalParameterConfiguration.ThisParameter,
                 _parametersWithoutDefaultValues.Where(p => !p.IsRemoved).Select(p => (Parameter)new ExistingParameter(p.ParameterSymbol)).ToImmutableArray(),
                 _parametersWithDefaultValues.Where(p => !p.IsRemoved).Select(p => (Parameter)new ExistingParameter(p.ParameterSymbol)).ToImmutableArray(),
-                (_paramsParameter == null || _paramsParameter.IsRemoved) ? null : new ExistingParameter(_paramsParameter.ParameterSymbol),
+                _paramsParameter == null || _paramsParameter.IsRemoved ? null : new ExistingParameter(_paramsParameter.ParameterSymbol),
                 selectedIndex: -1);
         }
 

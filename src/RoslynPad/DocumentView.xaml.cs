@@ -21,7 +21,6 @@
 
     public partial class DocumentView : IDisposable
     {
-        private readonly SynchronizationContext? _syncContext;
         private readonly MarkerMargin _errorMargin;
         private OpenDocumentViewModel _viewModel;
         private IResultObject? _contextMenuResultObject;
@@ -36,8 +35,6 @@
             Editor.TextArea.LeftMargins.Insert(0, _errorMargin);
             Editor.PreviewMouseWheel += EditorOnPreviewMouseWheel;
             Editor.TextArea.Caret.PositionChanged += CaretOnPositionChanged;
-
-            _syncContext = SynchronizationContext.Current;
 
             DataContextChanged += OnDataContextChanged;
         }
@@ -71,17 +68,12 @@
 
             _viewModel.EditorFocus += (o, e) => Editor.Focus();
             _viewModel.DocumentUpdated += (o, e) => Dispatcher.InvokeAsync(() => Editor.RefreshHighlighting());
-            _viewModel.ExecutionHostOutputLineReceived += s =>
+            _viewModel.OutputMessageReceived += s =>
             {
-                ShowResultPaneRow();
+                ShowBottomPaneRow();
 
-                _syncContext?.Post(
-                    _ =>
-                    {
-                        BottomTabs.SelectedItem = OutputTab;
-                        OutputText.AppendText($"{DateTime.Now:dd/MM/yyyy HH:mm:ss.fff} - {s}{Environment.NewLine}");
-                    },
-                    null);
+                BottomTabs.SelectedItem = OutputTab;
+                OutputText.AppendText($"{DateTime.Now:dd/MM/yyyy HH:mm:ss.fff} - {s}{Environment.NewLine}");
             };
             _viewModel.RunStarted += () => OutputText.Clear();
 
@@ -133,9 +125,9 @@
 
         private void ResultsAvailable(IResultObject o)
         {
-            ShowResultPaneRow();
-            _syncContext?.Post(
-                _ =>
+            ShowBottomPaneRow();
+            _viewModel.Dispatcher.InvokeAsync(
+                () =>
                 {
                     switch (o)
                     {
@@ -148,12 +140,21 @@
                             break;
                     }
                 },
-                null);
+                AppDispatcherPriority.Low);
         }
 
-        private void ShowResultPaneRow()
+        private void ShowBottomPaneRow()
         {
-            _syncContext?.Post(_ => ResultPaneRow.Height = new GridLength(1, GridUnitType.Star), null);
+            _viewModel.Dispatcher.InvokeAsync(
+                () =>
+                {
+                    var height = BottomPaneRow.Height;
+                    if (height.Value == 0)
+                    {
+                        BottomPaneRow.Height = new GridLength(1, GridUnitType.Star);
+                    }
+                },
+                AppDispatcherPriority.Low);
         }
 
         private void OnError(ExceptionResultObject? e)

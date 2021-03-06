@@ -126,14 +126,19 @@ namespace RoslynPad.UI
             _executionHost.RestoreStarted += OnRestoreStarted;
             _executionHost.RestoreCompleted += OnRestoreCompleted;
             _executionHost.RestoreMessage += AddResult;
-            _executionHost.RestoreStdOutLine += s =>
-                _dispatcher.InvokeAsync(() =>
-                {
-                    ExecutionHostOutputLineReceived?.Invoke(s);
-                }, AppDispatcherPriority.Low);
+            _executionHost.RestoreStdOutLine += SetOutputMessage;
+            _executionHost.BuildMessage += SetOutputMessage;
             _executionHost.ProgressChanged += p => ReportedProgress = p.Progress;
 
             InitializePlatforms();
+        }
+
+        private void SetOutputMessage(string s)
+        {
+            _dispatcher.InvokeAsync(() =>
+            {
+                OutputMessageReceived?.Invoke(s);
+            }, AppDispatcherPriority.Low);
         }
 
         private void ClearDump()
@@ -232,7 +237,7 @@ namespace RoslynPad.UI
 
         public event Action<IResultObject>? ResultsAvailable;
 
-        public event Action<string>? ExecutionHostOutputLineReceived;
+        public event Action<string>? OutputMessageReceived;
 
         public event Action? RunStarted;
 
@@ -648,7 +653,9 @@ namespace RoslynPad.UI
                     // Make sure the execution working directory matches the current script path
                     // which may have changed since we loaded.
                     if (_executionHostParameters.WorkingDirectory != WorkingDirectory)
+                    {
                         _executionHostParameters.WorkingDirectory = WorkingDirectory;
+                    }
 
                     await _executionHost.ExecuteAsync(code, OptimizationLevel).ConfigureAwait(true);
                 }
@@ -908,6 +915,8 @@ namespace RoslynPad.UI
                 }
             }
         }
+
+        public IAppDispatcher Dispatcher => _dispatcher;
 
         public event EventHandler? EditorFocus;
 

@@ -102,13 +102,6 @@ namespace RoslynPad.Build
             MetadataReferences = ImmutableArray<MetadataReference>.Empty;
         }
 
-        private static void WriteJson(string path, JToken token)
-        {
-            using var file = File.CreateText(path);
-            using var writer = new JsonTextWriter(file);
-            token.WriteTo(writer);
-        }
-
         public event Action<IList<CompilationErrorResultObject>>? CompilationErrors;
         public event Action<ResultObject>? Dumped;
         public event Action<DictionaryListResultObject>? DictionaryListDumped;
@@ -118,6 +111,8 @@ namespace RoslynPad.Build
         public event Action<RestoreResult>? RestoreCompleted;
         public event Action<RestoreResultObject>? RestoreMessage;
         public event Action<string>? RestoreStdOutLine;
+        public event Action<string>? BuildMessage;
+
         public event Action<ProgressResultObject>? ProgressChanged;
 
         public void Dispose()
@@ -167,17 +162,30 @@ namespace RoslynPad.Build
                 using var executeCts = new CancellationTokenSource();
                 var cancellationToken = executeCts.Token;
 
+                BuildMessage?.Invoke("Build started.");
+
                 var script = CreateScriptRunner(code, optimizationLevel);
 
                 _assemblyPath = Path.Combine(BuildPath, "bin", $"rp-{Name}.{AssemblyExtension}");
 
+                BuildMessage?.Invoke($"Build Configuration: {optimizationLevel} {script.Platform}.");
+                BuildMessage?.Invoke($"{_assemblyPath} assembly save started.");
+
                 var diagnostics = await script.SaveAssembly(_assemblyPath, cancellationToken).ConfigureAwait(false);
                 SendDiagnostics(diagnostics);
 
-                if (diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
+                BuildMessage?.Invoke($"{_assemblyPath} assembly save ended.");
+
+                var errorDiagnostics = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+                if (errorDiagnostics.Any())
                 {
+                    SendErrorDiagnosticsBuildMessages(errorDiagnostics);
+                    BuildMessage?.Invoke("Build FAILED.");
+
                     return;
                 }
+
+                BuildMessage?.Invoke("Build succeeded.");
 
                 _executeCts = executeCts;
 
@@ -196,6 +204,18 @@ namespace RoslynPad.Build
             }
         }
 
+        private void SendErrorDiagnosticsBuildMessages(IReadOnlyList<Diagnostic> errorDiagnostics)
+        {
+            for (var i = 0; i < errorDiagnostics.Count; i++)
+            {
+                var errorDiagnostic = errorDiagnostics[i];
+                var errorLineSpan = errorDiagnostic.Location.GetLineSpan();
+
+                BuildMessage?.Invoke(
+                    $"{(string.IsNullOrWhiteSpace(errorLineSpan.Path) ? "Line" : errorLineSpan.Path)} ({errorLineSpan.StartLinePosition.Line}, {errorLineSpan.StartLinePosition.Character}): {errorDiagnostic.Severity} {errorDiagnostic.Id}: {errorDiagnostic.GetMessage()}.");
+            }
+        }
+
         private string AssemblyExtension => Platform.IsCore ? "dll" : "exe";
 
         public ImmutableArray<MetadataReference> MetadataReferences { get; private set; }
@@ -203,12 +223,12 @@ namespace RoslynPad.Build
 
         private ScriptRunner CreateScriptRunner(string code, OptimizationLevel? optimizationLevel)
         {
-            Platform platform = Platform.Architecture == Architecture.X86
+            var platform = Platform.Architecture == Architecture.X86
                 ? Microsoft.CodeAnalysis.Platform.AnyCpu32BitPreferred
                 : Microsoft.CodeAnalysis.Platform.AnyCpu;
 
-            return new ScriptRunner(code: null,
-                                    syntaxTrees: ImmutableList.Create(_initHostSyntax, ParseCode(code)),
+            return new ScriptRunner(null,
+                                    ImmutableList.Create(_initHostSyntax, ParseCode(code)),
                                     _roslynHost.ParseOptions as CSharpParseOptions,
                                     OutputKind.ConsoleApplication,
                                     platform,
@@ -334,23 +354,6 @@ namespace RoslynPad.Build
             {
                 var members = c.Members;
 
-                // add .Dump() to the last bare expression
-                var lastMissingSemicolon = c.Members.OfType<GlobalStatementSyntax>()
-                    .LastOrDefault(m => m.Statement is ExpressionStatementSyntax expr && expr.SemicolonToken.IsMissing);
-                if (lastMissingSemicolon != null)
-                {
-                    var statement = (ExpressionStatementSyntax)lastMissingSemicolon.Statement;
-
-                    members = members.Replace(lastMissingSemicolon,
-                        GlobalStatement(
-                            ExpressionStatement(
-                            InvocationExpression(
-                                MemberAccessExpression(
-                                    SyntaxKind.SimpleMemberAccessExpression,
-                                    statement.Expression,
-                                    IdentifierName(nameof(ObjectExtensions.Dump)))))));
-                }
-
                 root = c.WithMembers(members);
             }
 
@@ -362,7 +365,7 @@ namespace RoslynPad.Build
             if (diagnostics.Length > 0)
             {
                 CompilationErrors?.Invoke(diagnostics.Where(d => !_parameters.DisabledDiagnostics.Contains(d.Id))
-                    .Select(d => GetCompilationErrorResultObject(d)).ToImmutableArray());
+                    .Select(GetCompilationErrorResultObject).ToImmutableArray());
             }
         }
 

@@ -2,11 +2,11 @@ namespace RoslynPad.Behaviors
 {
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
-    using System.Collections.Specialized;
     using System.IO;
     using System.Text;
     using System.Windows;
-    using System.Windows.Controls;
+
+    using WebBrowser = System.Windows.Controls.WebBrowser;
 
     public sealed class WebBrowserBehavior
     {

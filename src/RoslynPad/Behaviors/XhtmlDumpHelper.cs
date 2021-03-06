@@ -77,6 +77,7 @@ namespace RoslynPad.Behaviors
         {
             for (var i = 0; i < dumpDictionaryLists.Count; i++)
             {
+                _writer.AddAttribute(HtmlTextWriterAttribute.Id, $"table-{i}");
                 _writer.RenderBeginTag(HtmlTextWriterTag.Table);
 
                 var items = dumpDictionaryLists[i];
@@ -114,6 +115,13 @@ namespace RoslynPad.Behaviors
                 _writer.RenderEndTag();
 
                 _writer.WriteLine();
+            }
+
+            if (dumpDictionaryLists.Count > 0)
+            {
+                _writer.RenderBeginTag(HtmlTextWriterTag.Script);
+                _writer.Write($"var el = document.getElementById('table-{dumpDictionaryLists.Count - 1}'); el.scrollIntoView();");
+                _writer.RenderEndTag();
             }
 
             _writer.RenderEndTag(); // body
