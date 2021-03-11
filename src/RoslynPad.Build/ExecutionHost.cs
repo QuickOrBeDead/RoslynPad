@@ -112,6 +112,7 @@ namespace RoslynPad.Build
         public event Action<RestoreResultObject>? RestoreMessage;
         public event Action<string>? RestoreStdOutLine;
         public event Action<string>? BuildMessage;
+        public event Action? ExecutionStarted;
 
         public event Action<ProgressResultObject>? ProgressChanged;
 
@@ -244,6 +245,8 @@ namespace RoslynPad.Build
 
         private async Task RunProcess(string assemblyPath, CancellationToken cancellationToken)
         {
+            ExecutionStarted?.Invoke();
+
             using (var process = new Process
                                       {
                                           StartInfo = GetProcessStartInfo(assemblyPath)

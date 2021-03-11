@@ -3,7 +3,6 @@
     using System;
     using System.Linq;
     using System.Text;
-    using System.Threading;
     using System.Windows;
     using System.Windows.Controls;
     using System.Windows.Input;
@@ -12,6 +11,7 @@
     using Avalon.Windows.Controls;
 
     using ICSharpCode.AvalonEdit.Document;
+    using ICSharpCode.AvalonEdit.Rendering;
 
     using Microsoft.CodeAnalysis.Text;
 
@@ -21,9 +21,22 @@
 
     public partial class DocumentView : IDisposable
     {
+        public enum ConsoleTextType
+        {
+            Output = 0,
+            Error = 1,
+            Warning = 2,
+            Information = 3
+        }
+
         private readonly MarkerMargin _errorMargin;
         private OpenDocumentViewModel _viewModel;
         private IResultObject? _contextMenuResultObject;
+
+        private static readonly Color ConsoleWarningColor = Color.FromArgb(255, 183, 122, 0);
+        private static readonly Color ConsoleErrorColor = Color.FromArgb(255, 138, 6, 3);
+        private static readonly Color ConsoleResultColor = Color.FromArgb(255, 78, 78, 78);
+        private static readonly Color ConsoleInformationColor = Color.FromArgb(255, 0, 127, 0);
 
 #pragma warning disable CS8618 // Non-nullable field is uninitialized.
         public DocumentView()
@@ -35,7 +48,12 @@
             Editor.TextArea.LeftMargins.Insert(0, _errorMargin);
             Editor.PreviewMouseWheel += EditorOnPreviewMouseWheel;
             Editor.TextArea.Caret.PositionChanged += CaretOnPositionChanged;
+
+            OutputText.Background = new SolidColorBrush(Colors.WhiteSmoke);
             OutputText.Document.UndoStack.SizeLimit = 0;
+
+            ConsoleText.Background = new SolidColorBrush(Colors.WhiteSmoke);
+            ConsoleText.Document.UndoStack.SizeLimit = 0;
 
             DataContextChanged += OnDataContextChanged;
         }
@@ -77,7 +95,28 @@
                 OutputText.AppendText($"{DateTime.Now:dd/MM/yyyy HH:mm:ss.fff} - {s}{Environment.NewLine}");
                 OutputText.ScrollToEnd();
             };
-            _viewModel.RunStarted += () => OutputText.Clear();
+            _viewModel.ConsoleMessageReceived += (s, t) =>
+            {
+                ConsoleTextType consoleTextType;
+                string separator;
+                if (t == ConsoleMessageType.Err)
+                {
+                    separator = "!";
+                    consoleTextType = ConsoleTextType.Error;
+                }
+                else
+                {
+                    consoleTextType = ConsoleTextType.Output;
+                    separator = ">";
+                }
+
+                WriteConsole(s, consoleTextType, separator);
+            };
+            _viewModel.ExecutionStarted += s =>
+            {
+                _viewModel.Dispatcher.InvokeAsync(() => WriteConsole($"['{s}.csx' code Execution Started]", ConsoleTextType.Information, "-"));
+            };
+            _viewModel.BuildStarted += () => OutputText.Clear();
 
             _viewModel.MainViewModel.EditorFontSizeChanged += OnEditorFontSizeChanged;
             Editor.FontSize = _viewModel.MainViewModel.EditorFontSize;
@@ -123,6 +162,64 @@
             dialog.ShowInline(this);
 
             _viewModel.SendInput(textBox.Text);
+        }
+
+        public sealed class OffsetColorizer : DocumentColorizingTransformer
+        {
+            public OffsetColorizer(Color color)
+            {
+                Brush = new SolidColorBrush(color);
+            }
+
+            public int StartOffset { get; set; }
+            public int EndOffset { get; set; }
+            public Brush Brush { get; private set; }
+
+            protected override void ColorizeLine(DocumentLine line)
+            {
+                if (line.Length == 0)
+                    return;
+
+                if (line.Offset < StartOffset || line.Offset > EndOffset)
+                    return;
+
+                int start = line.Offset > StartOffset ? line.Offset : StartOffset;
+                int end = EndOffset > line.EndOffset ? line.EndOffset : EndOffset;
+
+                ChangeLinePart(start, end, element => element.TextRunProperties.SetForegroundBrush(Brush));
+            }
+        }
+
+        public void WriteConsole(string text, ConsoleTextType textType = ConsoleTextType.Output, string separator = ">")
+        {
+            ShowBottomPaneRow();
+
+            BottomTabs.SelectedItem = ConsoleTab;
+
+            var doc = ConsoleText.Document;
+            var startOffset = doc.TextLength;
+            doc.Insert(doc.TextLength, $"{DateTime.Now:dd/MM/yyyy HH:mm:ss.fff} {separator} {text}{Environment.NewLine}");
+            var endOffset = doc.TextLength;
+
+            var colorizer = new OffsetColorizer(GetColor(textType)) { StartOffset = startOffset, EndOffset = endOffset };
+            ConsoleText.TextArea.TextView.LineTransformers.Add(colorizer);
+
+            ConsoleText.ScrollToEnd();
+        }
+
+        private Color GetColor(ConsoleTextType textType)
+        {
+            switch (textType)
+            {
+                case ConsoleTextType.Warning:
+                    return ConsoleWarningColor;
+                case ConsoleTextType.Error:
+                    return ConsoleErrorColor;
+                case ConsoleTextType.Information:
+                    return ConsoleInformationColor;
+                default:
+                    return ConsoleResultColor;
+            }
         }
 
         private void ResultsAvailable(IResultObject o)

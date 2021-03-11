@@ -22,6 +22,13 @@ using RoslynPad.Utilities;
 
 namespace RoslynPad.UI
 {
+    public enum ConsoleMessageType
+    {
+        Out,
+        Err
+    }
+
+
     [Export]
     public class OpenDocumentViewModel : NotificationObject
     {
@@ -129,6 +136,7 @@ namespace RoslynPad.UI
             _executionHost.RestoreStdOutLine += SetOutputMessage;
             _executionHost.BuildMessage += SetOutputMessage;
             _executionHost.ProgressChanged += p => ReportedProgress = p.Progress;
+            _executionHost.ExecutionStarted += () => ExecutionStarted?.Invoke(Title);
 
             InitializePlatforms();
         }
@@ -238,8 +246,10 @@ namespace RoslynPad.UI
         public event Action<IResultObject>? ResultsAvailable;
 
         public event Action<string>? OutputMessageReceived;
+        public event Action<string, ConsoleMessageType>? ConsoleMessageReceived;
 
-        public event Action? RunStarted;
+        public event Action? BuildStarted;
+        public event Action<string>? ExecutionStarted;
 
         private void AddResult(object o)
         {
@@ -265,7 +275,10 @@ namespace RoslynPad.UI
 
         private void ExecutionHostOnDump(ResultObject result)
         {
-            AddResult(result);
+            _dispatcher.InvokeAsync(() =>
+                {
+                    ConsoleMessageReceived?.Invoke(result.Value ?? string.Empty, ConsoleMessageType.Out);
+                }, AppDispatcherPriority.Low);
         }
 
         private void ExecutionHostOnError(ExceptionResultObject errorResult)
@@ -275,9 +288,7 @@ namespace RoslynPad.UI
                 _onError?.Invoke(errorResult);
                 if (errorResult != null)
                 {
-                    _results.Add(errorResult);
-
-                    ResultsAvailable?.Invoke(errorResult);
+                    ConsoleMessageReceived?.Invoke(errorResult.ToString(), ConsoleMessageType.Err);
                 }
             }, AppDispatcherPriority.Low);
         }
@@ -636,7 +647,7 @@ namespace RoslynPad.UI
             ReportedProgress = null;
 
             Reset();
-            RunStarted?.Invoke();
+            BuildStarted?.Invoke();
 
             await MainViewModel.AutoSaveOpenDocuments().ConfigureAwait(true);
 

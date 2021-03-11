@@ -238,14 +238,23 @@
                         Grid.Row="3"
                         TabStripPlacement="Bottom"
                         Name="BottomTabs">
-                <TabItem Header="Console" Name="ConsoleTab"></TabItem>
+                <TabItem Header="Console" Name="ConsoleTab">
+                    <avalonedit:TextEditor
+                        Name="ConsoleText"
+                        FontFamily="Consolas"
+                        FontSize="10pt"
+                        IsReadOnly="True"
+                        ShowLineNumbers="True"
+                        WordWrap="True" />
+                </TabItem>
                 <TabItem Header="Output" Name="OutputTab">
                     <avalonedit:TextEditor
                         Name="OutputText"
                         FontFamily="Consolas"
                         FontSize="10pt"
                         IsReadOnly="True"
-                        ShowLineNumbers="True"/>
+                        ShowLineNumbers="True"
+                        WordWrap="True"/>
                 </TabItem>
                 <TabItem Header="Errors" Name="ErrorsTab">
                     <DockPanel Grid.IsSharedSizeScope="True">
