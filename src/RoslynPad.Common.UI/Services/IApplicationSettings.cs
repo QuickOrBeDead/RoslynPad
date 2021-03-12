@@ -35,6 +35,8 @@ namespace RoslynPad.UI
     [Export(typeof(IApplicationSettings)), Shared]
     internal class ApplicationSettings : NotificationObject, IApplicationSettings
     {
+        private readonly IExceptionManager? _exceptionManager;
+
         private const int EditorFontSizeDefault = 12;
         private const string DefaultConfigFileName = "RoslynPad.json";
 
@@ -58,8 +60,9 @@ namespace RoslynPad.UI
         private readonly IConfigurationRoot _configuration;
 
         [ImportingConstructor]
-        public ApplicationSettings()
+        public ApplicationSettings([Import(AllowDefault = true)] IExceptionManager exceptionManager)
         {
+            _exceptionManager = exceptionManager;
             _defaultPlatformName = string.Empty;
 
             _configuration = new ConfigurationBuilder().AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.json"), optional: true)
@@ -188,6 +191,7 @@ namespace RoslynPad.UI
             if (string.IsNullOrEmpty(documentsPath))
             {
                 documentsPath = "/";
+                _exceptionManager?.ReportError(new InvalidOperationException("Unable to locate the user documents folder; Using root"));
             }
 
             return Path.Combine(documentsPath, "RoslynPad");
@@ -214,9 +218,11 @@ namespace RoslynPad.UI
                 using var reader = File.OpenText(path);
                 serializer.Populate(reader, this);
             }
-            catch
+            catch (Exception e)
             {
                 LoadDefaultSettings();
+
+                _exceptionManager?.ReportError(e);
             }
         }
 
@@ -236,9 +242,9 @@ namespace RoslynPad.UI
                 using var writer = File.CreateText(_path);
                 serializer.Serialize(writer, this);
             }
-            catch
+            catch (Exception e)
             {
-                // Empty
+                _exceptionManager?.ReportError(e);
             }
         }
     }

@@ -34,6 +34,9 @@ namespace RoslynPad.UI
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly IAppDispatcher _dispatcher;
+
+        private readonly IExceptionManager _exceptionManager;
+
         private readonly IPlatformsFactory _platformsFactory;
         private readonly IExecutionHost _executionHost;
         private readonly ObservableCollection<IResultObject> _results;
@@ -85,7 +88,7 @@ namespace RoslynPad.UI
         }
 
         [ImportingConstructor]
-        public OpenDocumentViewModel(IServiceProvider serviceProvider, MainViewModelBase mainViewModel, ICommandProvider commands, IAppDispatcher appDispatcher)
+        public OpenDocumentViewModel(IServiceProvider serviceProvider, MainViewModelBase mainViewModel, ICommandProvider commands, IAppDispatcher appDispatcher, IExceptionManager exceptionManager)
         {
             Id = Guid.NewGuid().ToString("n");
             BuildPath = Path.Combine(Path.GetTempPath(), "roslynpad", "build", Id);
@@ -103,6 +106,7 @@ namespace RoslynPad.UI
 
             _restoreSuccessful = true; // initially set to true so we can immediately start running and wait for restore
             _dispatcher = appDispatcher;
+            _exceptionManager = exceptionManager;
             _platformsFactory.Changed += InitializePlatforms;
 
             OpenBuildPathCommand = commands.Create(() => OpenBuildPath());
@@ -455,6 +459,11 @@ namespace RoslynPad.UI
             {
                 await Task.Run(() => _executionHost?.TerminateAsync()).ConfigureAwait(false);
             }
+            catch (Exception e)
+            {
+                _exceptionManager.ReportError(e);
+                throw;
+            }
             finally
             {
                 SetIsRunning(false);
@@ -499,9 +508,9 @@ namespace RoslynPad.UI
                 {
                     Process.Start(new ProcessStartInfo(new Uri("file://" + BuildPath).ToString()) { UseShellExecute = true });
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Empty
+                    _exceptionManager.ReportError(ex);
                 }
             });
         }

@@ -11,8 +11,8 @@
     public class MainViewModel : MainViewModelBase
     {
         [ImportingConstructor]
-        public MainViewModel(IServiceProvider serviceProvider, ICommandProvider commands, IApplicationSettings settings, NuGetViewModel nugetViewModel, DocumentFileWatcher documentFileWatcher) : 
-            base(serviceProvider, commands, settings, nugetViewModel, documentFileWatcher)
+        public MainViewModel(IServiceProvider serviceProvider, IExceptionManager exceptionManager, ICommandProvider commands, IApplicationSettings settings, NuGetViewModel nugetViewModel, DocumentFileWatcher documentFileWatcher) : 
+            base(serviceProvider, exceptionManager, commands, settings, nugetViewModel, documentFileWatcher)
         {
         }
 

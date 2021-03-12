@@ -17,6 +17,9 @@ namespace RoslynPad.UI
     public class MainViewModelBase : NotificationObject
     {
         private readonly IServiceProvider _serviceProvider;
+
+        private readonly IExceptionManager _exceptionManager;
+
         private readonly ICommandProvider _commands;
         private readonly DocumentFileWatcher _documentFileWatcher;
         private static readonly Version _currentVersion = new Version(16, 0);
@@ -30,8 +33,6 @@ namespace RoslynPad.UI
         private bool _documentsLoaded;
         private DocumentViewModel _documentRoot;
         private DocumentWatcher _documentWatcher;
-
-        private Exception? _lastError;
 
         public IApplicationSettings Settings { get; }
         public DocumentViewModel DocumentRoot
@@ -63,16 +64,22 @@ namespace RoslynPad.UI
         }
 
 #pragma warning disable CS8618 // Non-nullable field is uninitialized.
-        public MainViewModelBase(IServiceProvider serviceProvider, ICommandProvider commands, IApplicationSettings settings, NuGetViewModel nugetViewModel, DocumentFileWatcher documentFileWatcher)
+        public MainViewModelBase(IServiceProvider serviceProvider, IExceptionManager exceptionManager, ICommandProvider commands, IApplicationSettings settings, NuGetViewModel nugetViewModel, DocumentFileWatcher documentFileWatcher)
 #pragma warning restore CS8618 // Non-nullable field is uninitialized.
         {
             _serviceProvider = serviceProvider;
+            _exceptionManager = exceptionManager;
             _commands = commands;
             _documentFileWatcher = documentFileWatcher;
 
             settings.LoadDefault();
             Settings = settings;
 
+            _exceptionManager.LastErrorChanged += () =>
+            {
+                OnPropertyChanged(nameof(LastError));
+                OnPropertyChanged(nameof(HasError));
+            };
 
             NuGet = nugetViewModel;
 
@@ -80,7 +87,7 @@ namespace RoslynPad.UI
             OpenFileCommand = commands.CreateAsync(OpenFile);
             CloseCurrentDocumentCommand = commands.CreateAsync(CloseCurrentDocument);
             CloseDocumentCommand = commands.CreateAsync<OpenDocumentViewModel>(CloseDocument);
-            ClearErrorCommand = commands.Create(() => UpdateLastError(null));
+            ClearErrorCommand = commands.Create(() => _exceptionManager.ClearLastError());
             EditUserDocumentPathCommand = commands.Create(EditUserDocumentPath);
             ToggleOptimizationCommand = commands.Create(() => settings.OptimizeCompilation = !settings.OptimizeCompilation);
 
@@ -90,15 +97,6 @@ namespace RoslynPad.UI
 
             OpenDocuments = new ObservableCollection<OpenDocumentViewModel>();
             OpenDocuments.CollectionChanged += (sender, args) => OnPropertyChanged(nameof(HasNoOpenDocuments));
-        }
-
-        private void UpdateLastError(Exception? lastError)
-        {
-            // TODO: https://github.com/aelij/RoslynPad/search?q=ReportError
-            _lastError = lastError;
-
-            OnPropertyChanged(nameof(LastError));
-            OnPropertyChanged(nameof(HasError));
         }
 
         public async Task Initialize()
@@ -116,7 +114,7 @@ namespace RoslynPad.UI
             }
             catch (Exception e)
             {
-                UpdateLastError(e);
+                _exceptionManager.ReportError(e);
             }
         }
 
@@ -369,7 +367,7 @@ namespace RoslynPad.UI
         {
             get
             {
-                Exception? exception = _lastError;
+                var exception = _exceptionManager.LastError;
                 var aggregateException = exception as AggregateException;
                 return aggregateException?.Flatten() ?? exception;
             }

@@ -34,7 +34,7 @@ namespace RoslynPad.UI
         public string GlobalPackageFolder { get; }
 
         [ImportingConstructor]
-        public NuGetViewModel(IApplicationSettings appSettings)
+        public NuGetViewModel([Import(AllowDefault = true)] IExceptionManager? exceptionManager, IApplicationSettings appSettings)
         {
             try
             {
@@ -68,11 +68,11 @@ namespace RoslynPad.UI
                     {
                         settings = new Settings(appSettings.GetDefaultDocumentPath(), "RoslynPad.nuget.config");
                     }
-                    catch (NuGetConfigurationException)
+                    catch (NuGetConfigurationException ex)
                     {
                         if (i == retries)
                         {
-                            
+                            exceptionManager?.ReportError(ex);
                             throw;
                         }
                     }
@@ -177,6 +177,7 @@ namespace RoslynPad.UI
     public sealed class NuGetDocumentViewModel : NotificationObject
     {
         private readonly NuGetViewModel _nuGetViewModel;
+        private readonly IExceptionManager _exceptionManager;
 
         private string _searchTerm;
         private bool _isSearching;
@@ -193,10 +194,11 @@ namespace RoslynPad.UI
 
         [ImportingConstructor]
 #pragma warning disable CS8618 // Non-nullable field is uninitialized.
-        public NuGetDocumentViewModel(NuGetViewModel nuGetViewModel, ICommandProvider commands)
+        public NuGetDocumentViewModel(NuGetViewModel nuGetViewModel, ICommandProvider commands, IExceptionManager exceptionManager)
 #pragma warning restore CS8618 // Non-nullable field is uninitialized.
         {
             _nuGetViewModel = nuGetViewModel;
+            _exceptionManager = exceptionManager;
 
             InstallPackageCommand = commands.Create<PackageData>(InstallPackage);
         }
@@ -286,8 +288,8 @@ namespace RoslynPad.UI
                     IsPackagesMenuOpen = Packages.Count > 0;
                 }
                 catch (Exception e) when (!(e is OperationCanceledException))
-                {  
-                    // Empty
+                {
+                    _exceptionManager.ReportError(e);
                 }
             }
             finally
